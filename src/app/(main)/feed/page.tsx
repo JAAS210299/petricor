@@ -1,10 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import NuevoPost from './NuevoPost'
 import LikeButton from '@/components/LikeButton'
+import Link from 'next/link'
 
 export default async function FeedPage() {
   const supabase = await createServerSupabaseClient()
-
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: posts } = await supabase
@@ -39,17 +39,19 @@ export default async function FeedPage() {
             const liked = likesArr.some((l: any) => l.user_id === user?.id)
 
             return (
-              <div key={post.id} className="bg-stone-900 rounded-xl p-5 border border-stone-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-full bg-stone-700 flex items-center justify-center text-xs text-stone-300">
-                    {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+              <div key={post.id} className="bg-stone-900 rounded-xl border border-stone-800 hover:border-stone-600 transition-colors">
+                <Link href={`/post/${post.id}`} className="block p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-7 h-7 rounded-full bg-stone-700 flex items-center justify-center text-xs text-stone-300">
+                      {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+                    </div>
+                    <span className="text-stone-400 text-sm">
+                      {(post.profiles as any)?.username}
+                    </span>
                   </div>
-                  <span className="text-stone-400 text-sm">
-                    {(post.profiles as any)?.username}
-                  </span>
-                </div>
-                <p className="text-stone-200 text-sm leading-relaxed">{post.content}</p>
-                <div className="flex items-center justify-between mt-4">
+                  <p className="text-stone-200 text-sm leading-relaxed">{post.content}</p>
+                </Link>
+                <div className="flex items-center justify-between px-5 pb-4">
                   <LikeButton
                     postId={post.id}
                     initialLikes={likeCount}

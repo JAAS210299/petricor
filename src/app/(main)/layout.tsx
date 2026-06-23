@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, User, PlusSquare, Search } from 'lucide-react'
+import { Home, User, PlusSquare, Search, Bell } from 'lucide-react'
 
 export default function MainLayout({
   children,
@@ -19,6 +19,9 @@ export default function MainLayout({
           </Link>
           <Link href="/nuevo" className="text-stone-400 hover:text-stone-200 transition-colors">
             <PlusSquare size={22} />
+          </Link>
+          <Link href="/notificaciones" className="text-stone-400 hover:text-stone-200 transition-colors">
+            <Bell size={22} />
           </Link>
           <Link href="/perfil" className="text-stone-400 hover:text-stone-200 transition-colors">
             <User size={22} />

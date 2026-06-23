@@ -1,34 +1,18 @@
 import Link from 'next/link'
 import { Home, User, PlusSquare, Search, Bell, MessageCircle } from 'lucide-react'
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
       {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 px-6 py-4">
+      <nav className="fixed bottom-0 left-0 right-0 border-t px-6 py-4" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
         <div className="max-w-xl mx-auto flex items-center justify-between">
-          <Link href="/feed" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <Home size={22} />
-          </Link>
-          <Link href="/buscar" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <Search size={22} />
-          </Link>
-          <Link href="/nuevo" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <PlusSquare size={22} />
-          </Link>
-          <Link href="/mensajes" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <MessageCircle size={22} />
-          </Link>
-          <Link href="/notificaciones" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <Bell size={22} />
-          </Link>
-          <Link href="/perfil" className="text-stone-400 hover:text-stone-200 transition-colors">
-            <User size={22} />
-          </Link>
+          <Link href="/feed" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><Home size={22} /></Link>
+          <Link href="/buscar" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><Search size={22} /></Link>
+          <Link href="/nuevo" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><PlusSquare size={22} /></Link>
+          <Link href="/mensajes" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><MessageCircle size={22} /></Link>
+          <Link href="/notificaciones" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><Bell size={22} /></Link>
+          <Link href="/perfil" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity"><User size={22} /></Link>
         </div>
       </nav>
     </div>

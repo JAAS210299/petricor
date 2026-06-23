@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
+import { ThemeProvider } from '@/components/ThemeProvider'
 
 const geist = Geist({
   subsets: ['latin'],
@@ -10,6 +11,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: 'petricor',
   description: 'la comunidad que huele a tierra mojada',
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({
@@ -18,9 +20,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className={geist.variable}>
-      <body className="font-sans antialiased bg-stone-950">
-        {children}
+    <html lang="es" className={`${geist.variable} dark`} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import FollowButton from './FollowButton'
+import MensajeButton from './MensajeButton'
 
 export default async function PerfilUsuarioPage({
   params,
@@ -63,6 +64,12 @@ export default async function PerfilUsuarioPage({
               initialFollowing={isFollowing}
             />
           )}
+          {!isOwnProfile && user && (
+            <MensajeButton
+              currentUserId={user.id}
+              targetUserId={profile.id}
+            />
+          )} 
         </div>
 
         <div className="flex gap-6 mb-8 pb-8 border-b border-stone-800">
@@ -73,6 +80,7 @@ export default async function PerfilUsuarioPage({
           <div>
             <p className="text-stone-200 font-medium">{followersCount ?? 0}</p>
             <p className="text-stone-500 text-xs">seguidores</p>
+
           </div>
         </div>
 

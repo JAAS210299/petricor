@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, User, PlusSquare, Search, Bell } from 'lucide-react'
+import { Home, User, PlusSquare, Search, Bell, MessageCircle } from 'lucide-react'
 
 export default function MainLayout({
   children,
@@ -9,7 +9,7 @@ export default function MainLayout({
   return (
     <div className="min-h-screen bg-stone-950">
       {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 px-8 py-4">
+      <nav className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 px-6 py-4">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <Link href="/feed" className="text-stone-400 hover:text-stone-200 transition-colors">
             <Home size={22} />
@@ -19,6 +19,9 @@ export default function MainLayout({
           </Link>
           <Link href="/nuevo" className="text-stone-400 hover:text-stone-200 transition-colors">
             <PlusSquare size={22} />
+          </Link>
+          <Link href="/mensajes" className="text-stone-400 hover:text-stone-200 transition-colors">
+            <MessageCircle size={22} />
           </Link>
           <Link href="/notificaciones" className="text-stone-400 hover:text-stone-200 transition-colors">
             <Bell size={22} />

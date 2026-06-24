@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Heart, MessageCircle, UserPlus } from 'lucide-react'
 import Link from 'next/link'
+import type { ReactNode } from 'react' // Se añade el tipo ReactNode
 
 export default async function NotificacionesPage() {
   const supabase = await createServerSupabaseClient()
@@ -22,7 +23,8 @@ export default async function NotificacionesPage() {
     .eq('user_id', user.id)
     .eq('read', false)
 
-  const iconMap: Record<string, JSX.Element> = {
+  // Corrección: Se cambia JSX.Element por ReactNode para evitar el error de namespace global en producción
+  const iconMap: Record<string, ReactNode> = {
     like: <Heart size={14} className="text-rose-400" />,
     comment: <MessageCircle size={14} className="text-blue-400" />,
     follow: <UserPlus size={14} className="text-green-400" />,

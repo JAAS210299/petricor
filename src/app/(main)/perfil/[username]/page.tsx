@@ -2,6 +2,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import FollowButton from './FollowButton'
 import MensajeButton from './MensajeButton'
+import { Metadata } from 'next'
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params
+  return {
+    title: `@${username} | Petricor`,
+  }
+}
 
 export default async function PerfilUsuarioPage({
   params,

@@ -1,8 +1,9 @@
+// src/app/(main)/notificaciones/page.tsx
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Heart, MessageCircle, UserPlus } from 'lucide-react'
 import Link from 'next/link'
-import type { ReactNode } from 'react' // Se añade el tipo ReactNode
+import type { ReactNode } from 'react'
 
 export default async function NotificacionesPage() {
   const supabase = await createServerSupabaseClient()
@@ -16,14 +17,13 @@ export default async function NotificacionesPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // Marcar todas como leídas
+  // Marcar todas como leídas usando tus columnas reales ('read')
   await supabase
     .from('notifications')
     .update({ read: true })
     .eq('user_id', user.id)
     .eq('read', false)
 
-  // Corrección: Se cambia JSX.Element por ReactNode para evitar el error de namespace global en producción
   const iconMap: Record<string, ReactNode> = {
     like: <Heart size={14} className="text-rose-400" />,
     comment: <MessageCircle size={14} className="text-blue-400" />,

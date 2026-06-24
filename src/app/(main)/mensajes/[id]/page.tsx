@@ -2,11 +2,13 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import MensajeForm from './MensajeForm'
+import ChatBox from './MensajeForm'
+
+export const dynamic = 'force-dynamic'
 
 export default async function ConversacionPage({
   params,
-}: { 
+}: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
@@ -32,42 +34,33 @@ export default async function ConversacionPage({
 
   const { data: messages } = await supabase
     .from('messages')
-    .select(`*, sender:profiles!messages_sender_id_fkey (username)`)
+    .select('*, profiles!messages_sender_id_fkey (username)')
     .eq('conversation_id', id)
     .order('created_at', { ascending: true })
+    .limit(50)
 
   return (
-    <main className="min-h-screen bg-stone-950 text-stone-200 pb-36">
+    <main className="min-h-screen pb-36" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <div className="max-w-xl mx-auto px-4 py-8">
+
+        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/mensajes" className="text-stone-500 hover:text-stone-300 transition-colors">
+          <Link href="/mensajes" className="transition-opacity hover:opacity-60" style={{ color: 'var(--text-muted)' }}>
             <ArrowLeft size={18} />
           </Link>
-          <div className="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center text-xs text-stone-300">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
             {other?.username?.[0]?.toUpperCase()}
           </div>
-          <span className="text-stone-300 text-sm">@{other?.username}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>@{other?.username}</span>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {messages?.map(msg => {
-            const isOwn = msg.sender_id === user.id
-            return (
-              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xs rounded-2xl px-4 py-2.5 text-sm ${
-                  isOwn
-                    ? 'bg-stone-200 text-stone-900 rounded-br-sm'
-                    : 'bg-stone-800 text-stone-200 rounded-bl-sm'
-                }`}>
-                  {msg.content}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <ChatBox
+          conversationId={id}
+          senderId={user.id}
+          initialMessages={messages ?? []}
+        />
+
       </div>
-
-      <MensajeForm conversationId={id} senderId={user.id} />
     </main>
   )
 }

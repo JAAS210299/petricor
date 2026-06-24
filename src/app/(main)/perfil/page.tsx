@@ -1,3 +1,4 @@
+// src/app/(main)/perfil/page.tsx
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CerrarSesion from './CerrarSesion'
@@ -15,6 +16,13 @@ export default async function PerfilPage() {
   const { data: posts } = await supabase
     .from('posts').select('*').eq('user_id', user.id)
     .order('created_at', { ascending: false })
+
+  // 📊 Consultas de contadores de seguimiento
+  const { count: seguidoresCount } = await supabase
+    .from('follows').select('*', { count: 'exact', head: true }).eq('following_id', user.id)
+
+  const { count: seguidosCount } = await supabase
+    .from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id)
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
@@ -53,10 +61,19 @@ export default async function PerfilPage() {
           </div>
         </div>
 
+        {/* 📊 Bloque de contadores optimizado */}
         <div className="flex gap-6 mb-8 pb-8 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <p className="font-medium" style={{ color: 'var(--text)' }}>{posts?.length ?? 0}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>publicaciones</p>
+          </div>
+          <div>
+            <p className="font-medium" style={{ color: 'var(--text)' }}>{seguidoresCount ?? 0}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>seguidores</p>
+          </div>
+          <div>
+            <p className="font-medium" style={{ color: 'var(--text)' }}>{seguidosCount ?? 0}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>seguidos</p>
           </div>
         </div>
 

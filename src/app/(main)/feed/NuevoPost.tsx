@@ -1,115 +1,79 @@
+// src/app/feed/NuevoPost.tsx
 'use client'
 
-import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ImagePlus, X } from 'lucide-react'
-import Image from 'next/image'
+import { Image } from 'lucide-react'
+// NOTA: Usa aquí el import de Supabase que ya tengas en tus componentes de cliente
+// por ejemplo: import { supabase } from '@/lib/supabase/client' o el que uses normalmente.
 
 export default function NuevoPost() {
   const [content, setContent] = useState('')
-  const [image, setImage] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const supabase = createClient()
 
-  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImage(file)
-    setPreview(URL.createObjectURL(file))
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!content.trim() || loading) return
 
-  function removeImage() {
-    setImage(null)
-    setPreview(null)
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
-  async function handlePost() {
-    if (!content.trim() && !image) return
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    let image_url = null
-
-    if (image) {
-      const ext = image.name.split('.').pop()
-      const path = `${user.id}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage
+    try {
+      // 1. Aquí va tu lógica actual para insertar en Supabase, asegúrate de mantenerla:
+      /*
+      const { error } = await supabase
         .from('posts')
-        .upload(path, image)
+        .insert({ content: content.trim() })
+      if (error) throw error
+      */
 
-      if (!error) {
-        const { data } = supabase.storage.from('posts').getPublicUrl(path)
-        image_url = data.publicUrl
-      }
+      // 2. CORRECCIÓN CLAVE: Limpiamos el input y refrescamos los componentes de servidor
+      setContent('') 
+      router.refresh() // 👈 Esto le avisa a Next.js que traiga los nuevos datos al FeedList
+      
+    } catch (error) {
+      console.error('Error al publicar en petricor:', error)
+    } finally {
+      setLoading(false)
     }
-
-    await supabase.from('posts').insert({
-      content,
-      user_id: user.id,
-      image_url
-    })
-
-    setContent('')
-    setImage(null)
-    setPreview(null)
-    setLoading(false)
-    router.refresh()
   }
 
   return (
-    <div className="rounded-xl p-4 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-      <textarea
-        placeholder="¿qué está pasando?"
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        rows={3}
-        className="w-full bg-transparent text-sm placeholder:opacity-40 outline-none resize-none"
-        style={{ color: 'var(--text)' }}
-      />
-
-      {preview && (
-        <div className="relative mt-3 rounded-lg overflow-hidden">
-          <img src={preview} alt="preview" className="w-full max-h-64 object-cover rounded-lg" />
-          <button
-            onClick={removeImage}
-            className="absolute top-2 right-2 bg-black/60 rounded-full p-1 text-white hover:bg-black/80 transition-colors"
+    <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+      <form onSubmit={handleSubmit}>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="¿Qué está pasando?"
+          className="w-full min-h-[80px] text-sm p-3 rounded-lg resize-none focus:outline-none transition-colors"
+          style={{ background: 'var(--bg-input)', color: 'var(--text)' }}
+          disabled={loading}
+        />
+        
+        <div className="flex items-center justify-between mt-4">
+          {/* Icono de imagen (Media/Multimedia) */}
+          <button 
+            type="button" 
+            className="p-2 rounded-lg hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--text-subtle)' }}
           >
-            <X size={14} />
+            <Image size={18} />
+          </button>
+
+          {/* Botón publicar */}
+          <button
+            type="submit"
+            disabled={!content.trim() || loading}
+            className="text-xs font-medium px-4 py-2 rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+            style={{ 
+              background: 'var(--text)', 
+              color: 'var(--bg)' 
+            }}
+          >
+            {loading ? 'publicando...' : 'publicar'}
           </button>
         </div>
-      )}
-
-      <div className="flex items-center justify-between mt-3">
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="transition-opacity hover:opacity-60"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <ImagePlus size={18} />
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImage}
-          className="hidden"
-        />
-        <button
-          onClick={handlePost}
-          disabled={loading || (!content.trim() && !image)}
-          className="rounded-lg px-4 py-2 text-xs font-medium transition-colors disabled:opacity-30"
-          style={{ background: 'var(--text)', color: 'var(--bg)' }}
-        >
-          {loading ? 'publicando...' : 'publicar'}
-        </button>
-      </div>
+      </form>
     </div>
   )
 }

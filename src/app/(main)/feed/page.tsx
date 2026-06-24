@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import NuevoPost from './NuevoPost'
 import LikeButton from '@/components/LikeButton'
 import Link from 'next/link'
+import { MessageCircle } from 'lucide-react'
 
 export default async function FeedPage() {
   const supabase = await createServerSupabaseClient()
@@ -12,7 +13,8 @@ export default async function FeedPage() {
     .select(`
       id, content, created_at, image_url,
       profiles (username, avatar_url),
-      likes (id, user_id)
+      likes (id, user_id),
+      comments (id)
     `)
     .order('created_at', { ascending: false })
 
@@ -35,14 +37,23 @@ export default async function FeedPage() {
             const likesArr = (post.likes as any[]) ?? []
             const likeCount = likesArr.length
             const liked = likesArr.some((l: any) => l.user_id === user?.id)
+            const commentCount = (post.comments as any[])?.length ?? 0
 
             return (
               <div key={post.id} className="rounded-xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <Link href={`/post/${post.id}`} className="block p-5">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
-                      {(post.profiles as any)?.username?.[0]?.toUpperCase()}
-                    </div>
+                    {(post.profiles as any)?.avatar_url ? (
+                      <img
+                        src={(post.profiles as any).avatar_url}
+                        alt="avatar"
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                        {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                       {(post.profiles as any)?.username}
                     </span>
@@ -58,9 +69,13 @@ export default async function FeedPage() {
                     />
                   )}
                 </Link>
-                <div className="flex items-center justify-between px-5 pb-4">
+                <div className="flex items-center gap-4 px-5 pb-4">
                   <LikeButton postId={post.id} initialLikes={likeCount} initialLiked={liked} userId={user?.id ?? null} />
-                  <p className="text-xs" style={{ color: 'var(--text-subtle)' }}>
+                  <div className="flex items-center gap-1.5" style={{ color: 'var(--text-subtle)' }}>
+                    <MessageCircle size={15} />
+                    <span className="text-xs">{commentCount}</span>
+                  </div>
+                  <p className="text-xs ml-auto" style={{ color: 'var(--text-subtle)' }}>
                     {new Date(post.created_at).toLocaleDateString('es-ES', {
                       day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
                     })}

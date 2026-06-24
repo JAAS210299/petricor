@@ -38,37 +38,36 @@ export default async function FeedPage() {
             const likeCount = likesArr.length
             const liked = likesArr.some((l: any) => l.user_id === user?.id)
             const commentCount = (post.comments as any[])?.length ?? 0
+            const username = (post.profiles as any)?.username
+            const avatarUrl = (post.profiles as any)?.avatar_url
 
             return (
               <div key={post.id} className="rounded-xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                <Link href={`/post/${post.id}`} className="block p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    {(post.profiles as any)?.avatar_url ? (
-                      <img
-                        src={(post.profiles as any).avatar_url}
-                        alt="avatar"
-                        className="w-7 h-7 rounded-full object-cover"
-                      />
+                {/* Header — avatar y username clickable al perfil */}
+                <div className="flex items-center gap-2 p-5 pb-0">
+                  <Link href={`/perfil/${username}`} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
                     ) : (
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
-                        {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+                        {username?.[0]?.toUpperCase()}
                       </div>
                     )}
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {(post.profiles as any)?.username}
-                    </span>
-                  </div>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{username}</span>
+                  </Link>
+                </div>
+
+                {/* Contenido clickable al post */}
+                <Link href={`/post/${post.id}`} className="block px-5 pt-3 pb-3">
                   {post.content && (
                     <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
                   )}
                   {post.image_url && (
-                    <img
-                      src={post.image_url}
-                      alt="imagen del post"
-                      className="w-full rounded-lg mt-3 object-cover max-h-80"
-                    />
+                    <img src={post.image_url} alt="imagen del post" className="w-full rounded-lg mt-3 object-cover max-h-80" />
                   )}
                 </Link>
+
+                {/* Acciones */}
                 <div className="flex items-center gap-4 px-5 pb-4">
                   <LikeButton postId={post.id} initialLikes={likeCount} initialLiked={liked} userId={user?.id ?? null} />
                   <div className="flex items-center gap-1.5" style={{ color: 'var(--text-subtle)' }}>

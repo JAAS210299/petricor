@@ -1,47 +1,108 @@
-// src/app/(main)/post/[id]/page.tsx
-import { createServerSupabaseClient } from '@/lib/supabase/server' // 👈 Cambiado aquí
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import PostDetail from './PostDetail'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import ComentarForm from './ComentarForm'
+import EliminarPost from './EliminarPost'
 
-interface PageProps {
+export const dynamic = 'force-dynamic'
+
+export default async function PostPage({
+  params,
+}: {
   params: Promise<{ id: string }>
-}
-
-export default async function PostPage({ params }: PageProps) {
+}) {
   const { id } = await params
-  const supabase = await createServerSupabaseClient() // 👈 Cambiado aquí también
-
-  // 1. Obtener la sesión del usuario actual si está logueado
+  const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2. Traer el post completo con su perfil, sus likes y todos sus comentarios ordenados
-  const { data: post, error } = await supabase
+  const { data: post } = await supabase
     .from('posts')
-    .select(`
-      id, content, created_at, image_url, user_id,
-      profiles (id, username, avatar_url),
-      likes (id, user_id),
-      comments (
-        id, content, created_at, user_id,
-        profiles (id, username, avatar_url)
-      )
-    `)
+    .select(`*, profiles (username, avatar_url)`)
     .eq('id', id)
     .single()
 
-  // Si da error o el post no existe, disparamos el 404 nativo de Next.js
-  if (error || !post) {
-    notFound()
-  }
+  if (!post) notFound()
 
-  // Ordenar los comentarios del post por fecha
-  if (post.comments) {
-    post.comments.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }
+  const { data: comments } = await supabase
+    .from('comments')
+    .select(`*, profiles (username, avatar_url)`)
+    .eq('post_id', id)
+    .order('created_at', { ascending: true })
 
   return (
-    <div className="container px-4 py-6 mx-auto">
-      <PostDetail initialPost={post} userId={user?.id || null} />
-    </div>
+    <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      <div className="max-w-xl mx-auto px-4 py-8">
+
+        <Link href="/feed" className="flex items-center gap-2 mb-8 transition-opacity hover:opacity-60" style={{ color: 'var(--text-muted)' }}>
+          <ArrowLeft size={18} />
+          <span className="text-sm">volver</span>
+        </Link>
+
+        <div className="rounded-xl p-5 border mb-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <Link href={`/perfil/${(post.profiles as any)?.username}`} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+              {(post.profiles as any)?.avatar_url ? (
+                <img src={(post.profiles as any).avatar_url} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
+              ) : (
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                  {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                {(post.profiles as any)?.username}
+              </span>
+            </Link>
+            {user && (
+              <EliminarPost postId={post.id} userId={user.id} ownerId={post.user_id} />
+            )}
+          </div>
+          {post.content && (
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
+          )}
+          {post.image_url && (
+            <img src={post.image_url} alt="imagen del post" className="w-full rounded-lg mt-3 object-cover max-h-96" />
+          )}
+          <p className="text-xs mt-4" style={{ color: 'var(--text-subtle)' }}>
+            {new Date(post.created_at).toLocaleDateString('es-ES', {
+              day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+            })}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 mb-6">
+          <p className="text-xs tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+            {comments?.length ?? 0} comentarios
+          </p>
+          {comments?.map(comment => (
+            <div key={comment.id} className="flex gap-3">
+              <Link href={`/perfil/${(comment.profiles as any)?.username}`}>
+                {(comment.profiles as any)?.avatar_url ? (
+                  <img src={(comment.profiles as any).avatar_url} alt="avatar" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                    {(comment.profiles as any)?.username?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </Link>
+              <div>
+                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                  {(comment.profiles as any)?.username}
+                </span>
+                <p className="text-sm mt-0.5 leading-relaxed" style={{ color: 'var(--text)' }}>{comment.content}</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-subtle)' }}>
+                  {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {user && <ComentarForm postId={id} userId={user.id} />}
+
+      </div>
+    </main>
   )
 }

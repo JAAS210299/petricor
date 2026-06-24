@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import NotifBadge from '@/components/NotifBadge'
+import MensajesBadge from '@/components/MensajesBadge'
 import Link from 'next/link'
-import { Home, Search, PlusSquare, MessageCircle, User, Bell } from 'lucide-react'
+import { Home, Search, PlusSquare, User, Bell, MessageCircle } from 'lucide-react'
 
 export default async function MainLayout({
   children,
@@ -11,14 +12,32 @@ export default async function MainLayout({
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let initialCount = 0
+  let notifCount = 0
+  let mensajesCount = 0
+
   if (user) {
-    const { count } = await supabase
+    const { count: nc } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('read', false)
-    initialCount = count || 0
+    notifCount = nc || 0
+
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+
+    if (convs && convs.length > 0) {
+      const convIds = convs.map(c => c.id)
+      const { count: mc } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', convIds)
+        .eq('read', false)
+        .neq('sender_id', user.id)
+      mensajesCount = mc || 0
+    }
   }
 
   return (
@@ -35,11 +54,15 @@ export default async function MainLayout({
           <Link href="/nuevo" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
             <PlusSquare size={22} />
           </Link>
-          <Link href="/mensajes" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
-            <MessageCircle size={22} />
-          </Link>
           {user ? (
-            <NotifBadge userId={user.id} initialCount={initialCount} />
+            <MensajesBadge userId={user.id} initialCount={mensajesCount} />
+          ) : (
+            <Link href="/mensajes" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
+              <MessageCircle size={22} />
+            </Link>
+          )}
+          {user ? (
+            <NotifBadge userId={user.id} initialCount={notifCount} />
           ) : (
             <Link href="/notificaciones" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
               <Bell size={22} />

@@ -30,7 +30,20 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Realtime
+  // Marcar como leídos al entrar
+  useEffect(() => {
+    async function marcarLeidos() {
+      await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', senderId)
+        .eq('read', false)
+    }
+    marcarLeidos()
+  }, [conversationId, senderId])
+
+  // Realtime — nuevos mensajes
   useEffect(() => {
     const channel = supabase
       .channel(`conversation:${conversationId}`)
@@ -48,13 +61,22 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
             .select('*, profiles!messages_sender_id_fkey (username)')
             .eq('id', payload.new.id)
             .single()
-          if (data) setMessages(prev => [...prev, data])
+          if (data) {
+            setMessages(prev => [...prev, data])
+            // Marcar como leído si es del otro usuario
+            if (payload.new.sender_id !== senderId) {
+              await supabase
+                .from('messages')
+                .update({ read: true })
+                .eq('id', payload.new.id)
+            }
+          }
         }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [conversationId])
+  }, [conversationId, senderId])
 
   async function handleSend() {
     if (!content.trim()) return
@@ -70,7 +92,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
 
   return (
     <>
-      {/* Mensajes */}
       <div className="flex flex-col gap-3 pb-4">
         {messages.map(msg => {
           const isOwn = msg.sender_id === senderId
@@ -92,7 +113,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="fixed bottom-20 left-0 right-0 px-4 pb-2">
         <div
           className="max-w-xl mx-auto flex gap-2 items-end rounded-2xl px-4 py-3 border"

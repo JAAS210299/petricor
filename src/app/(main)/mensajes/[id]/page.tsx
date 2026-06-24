@@ -6,6 +6,17 @@ import ChatBox from './MensajeForm'
 
 export const dynamic = 'force-dynamic'
 
+async function marcarLeidos(conversationId: string, userId: string) {
+  'use server'
+  const supabase = await createServerSupabaseClient()
+  await supabase
+    .from('messages')
+    .update({ read: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+    .eq('read', false)
+}
+
 export default async function ConversacionPage({
   params,
 }: {
@@ -39,11 +50,12 @@ export default async function ConversacionPage({
     .order('created_at', { ascending: true })
     .limit(50)
 
+  await marcarLeidos(id, user.id)
+
   return (
     <main className="min-h-screen pb-36" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <div className="max-w-xl mx-auto px-4 py-8">
 
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <Link href="/mensajes" className="transition-opacity hover:opacity-60" style={{ color: 'var(--text-muted)' }}>
             <ArrowLeft size={18} />

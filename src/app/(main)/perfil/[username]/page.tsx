@@ -1,32 +1,28 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound } from 'next/navigation' // Volvemos a traer notFound
 import FollowButton from './FollowButton'
 import MensajeButton from './MensajeButton'
-import { Metadata } from 'next'
 
-export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
-  const { username } = await params
-  return {
-    title: `@${username} | Petricor`,
-  }
-}
-
-export default async function PerfilUsuarioPage({
-  params,
-}: {
+export default async function PerfilUsuarioPage(props: {
   params: Promise<{ username: string }>
 }) {
-  const { username } = await params
+  const params = await props.params
+  const username = params.username
+
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Usamos .ilike para ignorar mayúsculas/minúsculas y .maybeSingle() por seguridad
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('username', username)
-    .single()
+    .ilike('username', username) 
+    .maybeSingle()
 
-  if (!profile) notFound()
+  // Si después del RLS y el ilike sigue sin existir, ahora sí disparamos el 404 real
+  if (!profile) {
+    notFound()
+  }
 
   const { data: posts } = await supabase
     .from('posts')

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import ComentarForm from './ComentarForm'
+import EliminarPost from './EliminarPost'
 
 export default async function PostPage({
   params,
@@ -38,13 +39,18 @@ export default async function PostPage({
 
         {/* Post */}
         <div className="rounded-xl p-5 border mb-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
-              {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                {(post.profiles as any)?.username?.[0]?.toUpperCase()}
+              </div>
+              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                {(post.profiles as any)?.username}
+              </span>
             </div>
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {(post.profiles as any)?.username}
-            </span>
+            {user && (
+              <EliminarPost postId={post.id} userId={user.id} ownerId={post.user_id} />
+            )}
           </div>
           {post.content && (
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>

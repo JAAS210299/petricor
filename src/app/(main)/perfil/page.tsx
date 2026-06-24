@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CerrarSesion from './CerrarSesion'
 import ThemeToggle from '@/components/ThemeToggle'
+import Link from 'next/link'
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabaseClient()
@@ -20,15 +21,33 @@ export default async function PerfilPage() {
       <div className="max-w-xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
-              {profile?.username?.[0]?.toUpperCase()}
-            </div>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="avatar"
+                className="w-14 h-14 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                {profile?.username?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div>
               <h1 className="font-medium" style={{ color: 'var(--text)' }}>@{profile?.username}</h1>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+              {profile?.bio && (
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{profile.bio}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/perfil/editar"
+              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              editar
+            </Link>
             <ThemeToggle />
             <CerrarSesion />
           </div>
@@ -49,6 +68,13 @@ export default async function PerfilPage() {
           )}
           {posts?.map(post => (
             <div key={post.id} className="rounded-xl p-5 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              {post.image_url && (
+                <img
+                  src={post.image_url}
+                  alt="imagen"
+                  className="w-full rounded-lg mb-3 object-cover max-h-64"
+                />
+              )}
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
               <p className="text-xs mt-3" style={{ color: 'var(--text-subtle)' }}>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {

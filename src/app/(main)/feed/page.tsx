@@ -10,7 +10,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at,
+      id, content, created_at, image_url,
       profiles (username, avatar_url),
       likes (id, user_id)
     `)
@@ -47,7 +47,16 @@ export default async function FeedPage() {
                       {(post.profiles as any)?.username}
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
+                  {post.content && (
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
+                  )}
+                  {post.image_url && (
+                    <img
+                      src={post.image_url}
+                      alt="imagen del post"
+                      className="w-full rounded-lg mt-3 object-cover max-h-80"
+                    />
+                  )}
                 </Link>
                 <div className="flex items-center justify-between px-5 pb-4">
                   <LikeButton postId={post.id} initialLikes={likeCount} initialLiked={liked} userId={user?.id ?? null} />

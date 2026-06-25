@@ -1,8 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import NotifBadge from '@/components/NotifBadge'
 import MensajesBadge from '@/components/MensajesBadge'
 import Link from 'next/link'
-import { Home, Search, PlusSquare, User, Bell, MessageCircle } from 'lucide-react'
+import { Home, Search, PlusSquare, User } from 'lucide-react'
 
 export default async function MainLayout({
   children,
@@ -11,11 +12,14 @@ export default async function MainLayout({
 }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || ''
+  const enChat = pathname.startsWith('/mensajes/') && pathname !== '/mensajes'
 
   let notifCount = 0
   let mensajesCount = 0
 
-  if (user) {
+  if (user && !enChat) {
     const { count: nc } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
@@ -57,15 +61,15 @@ export default async function MainLayout({
           {user ? (
             <MensajesBadge userId={user.id} initialCount={mensajesCount} />
           ) : (
-            <Link href="/mensajes" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
-              <MessageCircle size={22} />
+            <Link href="/mensajes" style={{ color: 'var(--text-muted)' }}>
+              <User size={22} />
             </Link>
           )}
           {user ? (
             <NotifBadge userId={user.id} initialCount={notifCount} />
           ) : (
-            <Link href="/notificaciones" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
-              <Bell size={22} />
+            <Link href="/notificaciones" style={{ color: 'var(--text-muted)' }}>
+              <User size={22} />
             </Link>
           )}
           <Link href="/perfil" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">

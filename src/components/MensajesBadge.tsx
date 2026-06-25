@@ -74,6 +74,6 @@ export default function MensajesBadge({ userId, initialCount }: MensajesBadgePro
           {displayCount > 9 ? '9+' : displayCount}
         </span>
       ) : null}
-    </Link>
+    </Link> 
   )
-}
+} 

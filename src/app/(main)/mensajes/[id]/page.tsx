@@ -43,12 +43,23 @@ export default async function ConversacionPage({
     ? conversation.user2 as any
     : conversation.user1 as any
 
-  const { data: messages } = await supabase
+  const { data: rawMessages } = await supabase
     .from('messages')
-    .select('*, profiles!messages_sender_id_fkey (username)')
+    .select('id, content, sender_id, created_at, read, media_url, media_type, profiles!messages_sender_id_fkey (username)')
     .eq('conversation_id', id)
     .order('created_at', { ascending: true })
     .limit(50)
+
+  const messages = (rawMessages ?? []).map((msg: any) => ({
+    id: msg.id,
+    content: msg.content,
+    sender_id: msg.sender_id,
+    created_at: msg.created_at,
+    read: msg.read,
+    media_url: msg.media_url,
+    media_type: msg.media_type,
+    profiles: msg.profiles,
+  }))
 
   await marcarLeidos(id, user.id)
 
@@ -69,7 +80,7 @@ export default async function ConversacionPage({
         <ChatBox
           conversationId={id}
           senderId={user.id}
-          initialMessages={messages ?? []}
+          initialMessages={messages}
         />
 
       </div>

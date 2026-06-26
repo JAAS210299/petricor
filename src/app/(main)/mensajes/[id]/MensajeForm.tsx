@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Send, ImagePlus, X } from 'lucide-react'
+import { Send, ImagePlus, X, Mic, Square, Play, Pause } from 'lucide-react'
 
 interface Message {
   id: string
@@ -21,17 +21,120 @@ interface Props {
   initialMessages: Message[]
 }
 
+function AudioPlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration)
+    }
+  }
+
+  const handleEnded = () => {
+    setIsPlaying(false)
+  }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value)
+    setCurrentTime(time)
+    if (audioRef.current) {
+      audioRef.current.currentTime = time
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+  }
+
+  const progress = duration ? (currentTime / duration) * 100 : 0
+
+  return (
+    <div className="w-full flex items-center gap-3 py-1">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleEnded}
+      />
+
+      <button
+        onClick={handlePlayPause}
+        className="flex-shrink-0 transition-opacity hover:opacity-80"
+        style={{ color: isOwn ? 'var(--bg)' : 'var(--text)' }}
+      >
+        {isPlaying ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
+      </button>
+
+      <div className="flex-1 flex items-center gap-2">
+        <div className="flex-1 h-6 bg-black bg-opacity-20 rounded-full relative flex items-center">
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-full opacity-0 cursor-pointer absolute"
+          />
+          <div
+            className="h-1 rounded-full transition-all"
+            style={{
+              width: `${progress}%`,
+              background: isOwn ? 'var(--bg)' : 'var(--text)',
+            }}
+          />
+        </div>
+      </div>
+
+      <span
+        className="text-xs flex-shrink-0"
+        style={{ color: isOwn ? 'var(--bg)' : 'var(--text)', opacity: 0.7 }}
+      >
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+    </div>
+  )
+}
+
 export default function ChatBox({ conversationId, senderId, initialMessages }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [content, setContent] = useState('')
   const [media, setMedia] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
   const observerRef = useRef<IntersectionObserver | null>(null)
   const markedAsReadRef = useRef<Set<string>>(new Set())
+  const processedIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -53,14 +156,12 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
           return
         }
 
-        // Actualizar estado local después
         setMessages(prev =>
           prev.map(m =>
             !m.read && m.sender_id !== senderId ? { ...m, read: true } : m
           )
         )
 
-        // Notificar al badge
         window.dispatchEvent(new CustomEvent('mensajes-leidos'))
       } catch (err) {
         console.error('Error:', err)
@@ -119,7 +220,10 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
           .eq('id', payload.new.id)
           .single()
         if (data) {
-          setMessages(prev => [...prev, data])
+          if (!processedIdsRef.current.has(data.id)) {
+            processedIdsRef.current.add(data.id)
+            setMessages(prev => [...prev, data])
+          }
         }
       })
       .subscribe()
@@ -140,6 +244,47 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     if (fileRef.current) fileRef.current.value = ''
   }
 
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+      setRecording(true)
+      setRecordingTime(0)
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        setMedia(new File([audioBlob], 'audio.webm', { type: 'audio/webm' }))
+        setPreview('recording-complete')
+      }
+
+      mediaRecorder.start()
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+    } catch (error) {
+      console.error('Error accediendo al micrófono:', error)
+      alert('No se pudo acceder al micrófono')
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+      setRecording(false)
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current)
+      }
+    }
+  }
+
   async function handleSend() {
     if (!content.trim() && !media) return
     setLoading(true)
@@ -149,7 +294,7 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
       let media_type = null
 
       if (media) {
-        const ext = media.name.split('.').pop()
+        const ext = media.type.includes('audio') ? 'webm' : media.name.split('.').pop()
         const path = `${senderId}/${Date.now()}.${ext}`
         const { error: uploadError } = await supabase.storage
           .from('posts')
@@ -166,16 +311,27 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
 
         const { data } = supabase.storage.from('posts').getPublicUrl(path)
         media_url = data.publicUrl
-        media_type = media.type.startsWith('video') ? 'video' : 'image'
+
+        if (media.type.includes('audio')) {
+          media_type = 'audio'
+        } else if (media.type.includes('video')) {
+          media_type = 'video'
+        } else if (media.type.includes('image')) {
+          media_type = 'image'
+        }
       }
 
-      const { error: msgError } = await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        content: content.trim() || '',
-        media_url,
-        media_type,
-      })
+      const { data: insertedMsg, error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content: content.trim() || '',
+          media_url,
+          media_type,
+        })
+        .select()
+        .single()
 
       if (msgError) {
         alert('Error al enviar mensaje: ' + msgError.message)
@@ -183,9 +339,14 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
         return
       }
 
+      if (insertedMsg) {
+        processedIdsRef.current.add(insertedMsg.id)
+      }
+
       setContent('')
       setMedia(null)
       setPreview(null)
+      setRecordingTime(0)
     } catch (error) {
       console.error('Error:', error)
       alert('Error al enviar')
@@ -194,11 +355,21 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     }
   }
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3 pb-4">
         {messages.map(msg => {
           const isOwn = msg.sender_id === senderId
+          const isAudio = msg.media_type === 'audio' || (msg.media_url && msg.media_url.includes('.webm'))
+          const isImage = msg.media_type === 'image' || (msg.media_url && (msg.media_url.includes('.jpg') || msg.media_url.includes('.png') || msg.media_url.includes('.gif')))
+          const isVideo = msg.media_type === 'video' || (msg.media_url && msg.media_url.includes('.mp4'))
+
           return (
             <div
               key={msg.id}
@@ -213,13 +384,16 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
                   border: isOwn ? 'none' : '1px solid var(--border)'
                 }}
               >
-                {msg.media_url && msg.media_type === 'image' && (
+                {isImage && msg.media_url && !isAudio && !isVideo && (
                   <img src={msg.media_url} alt="imagen" className="w-full rounded-xl mb-2 max-h-48 object-cover" />
                 )}
-                {msg.media_url && msg.media_type === 'video' && (
+                {isVideo && msg.media_url && (
                   <video src={msg.media_url} controls className="w-full rounded-xl mb-2 max-h-48" />
                 )}
-                {msg.content && <p>{msg.content}</p>}
+                {isAudio && msg.media_url && (
+                  <AudioPlayer src={msg.media_url} isOwn={isOwn} />
+                )}
+                {msg.content && msg.content !== 'EMPTY' && <p>{msg.content}</p>}
 
                 {isOwn && (
                   <div className="flex justify-end mt-1 gap-0.5 text-xs opacity-60">
@@ -237,10 +411,10 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
         <div ref={bottomRef} />
       </div>
 
-      {preview && (
+      {preview && preview !== 'recording-complete' && (
         <div className="fixed bottom-36 left-0 right-0 px-4">
           <div className="max-w-xl mx-auto relative inline-block">
-            {media?.type.startsWith('video') ? (
+            {media?.type.includes('video') ? (
               <video src={preview} className="h-32 rounded-xl object-cover" />
             ) : (
               <img src={preview} alt="preview" className="h-32 rounded-xl object-cover" />
@@ -251,6 +425,29 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
               style={{ background: 'var(--text)', color: 'var(--bg)' }}
             >
               <X size={10} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {recording && (
+        <div className="fixed bottom-36 left-0 right-0 px-4">
+          <div className="max-w-xl mx-auto bg-red-500 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+            <span className="text-sm">Grabando: {formatTime(recordingTime)}</span>
+          </div>
+        </div>
+      )}
+
+      {preview === 'recording-complete' && (
+        <div className="fixed bottom-36 left-0 right-0 px-4">
+          <div className="max-w-xl mx-auto bg-green-500 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+            <span className="text-sm">✓ Nota de voz lista</span>
+            <button
+              onClick={removeMedia}
+              className="ml-auto"
+            >
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -275,11 +472,31 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
             onChange={handleMedia}
             className="hidden"
           />
+
+          {recording ? (
+            <button
+              onClick={stopRecording}
+              className="transition-opacity hover:opacity-60 shrink-0"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Square size={18} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={startRecording}
+              className="transition-opacity hover:opacity-60 shrink-0"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Mic size={18} />
+            </button>
+          )}
+
           <textarea
             placeholder="escribe un mensaje..."
             value={content}
             onChange={e => setContent(e.target.value)}
             rows={1}
+            disabled={recording}
             className="flex-1 bg-transparent text-sm outline-none resize-none placeholder:opacity-40"
             style={{ color: 'var(--text)' }}
             onKeyDown={e => {
@@ -291,7 +508,7 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
           />
           <button
             onClick={handleSend}
-            disabled={loading || (!content.trim() && !media)}
+            disabled={loading || (!content.trim() && !media) || recording}
             className="transition-opacity hover:opacity-60 disabled:opacity-30 shrink-0"
             style={{ color: 'var(--text-muted)' }}
           >

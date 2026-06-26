@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation' // Volvemos a traer notFound
+import { notFound } from 'next/navigation'
 import FollowButton from './FollowButton'
 import MensajeButton from './MensajeButton'
 
@@ -30,12 +30,14 @@ export default async function PerfilUsuarioPage(props: {
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
 
+  // ✨ CORREGIDO: Cambiado .single() por .maybeSingle() para evitar que la página
+  // se rompa con un error de base de datos si el usuario actual no sigue a este perfil.
   const { data: followData } = await supabase
     .from('follows')
     .select('id')
     .eq('follower_id', user?.id ?? '')
     .eq('following_id', profile.id)
-    .single()
+    .maybeSingle()
 
   const { count: followersCount } = await supabase
     .from('follows')
@@ -84,7 +86,6 @@ export default async function PerfilUsuarioPage(props: {
           <div>
             <p className="text-stone-200 font-medium">{followersCount ?? 0}</p>
             <p className="text-stone-500 text-xs">seguidores</p>
-
           </div>
         </div>
 

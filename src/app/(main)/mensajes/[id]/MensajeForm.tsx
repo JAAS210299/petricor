@@ -30,24 +30,80 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const markedAsReadRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Marcar todos los mensajes no leídos del otro usuario como leídos al cargar
   useEffect(() => {
     async function marcarLeidos() {
-      await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('conversation_id', conversationId)
-        .neq('sender_id', senderId)
-        .eq('read', false)
-      window.dispatchEvent(new CustomEvent('mensajes-leidos'))
-    }
-    marcarLeidos()
-  }, [conversationId, senderId])
+      try {
+        const { error } = await supabase
+          .from('messages')
+          .update({ read: true })
+          .eq('conversation_id', conversationId)
+          .neq('sender_id', senderId)
+          .eq('read', false)
 
+        if (error) {
+          console.error('Error marcando leídos:', error)
+          return
+        }
+
+        // Actualizar estado local después
+        setMessages(prev =>
+          prev.map(m =>
+            !m.read && m.sender_id !== senderId ? { ...m, read: true } : m
+          )
+        )
+
+        // Notificar al badge
+        window.dispatchEvent(new CustomEvent('mensajes-leidos'))
+      } catch (err) {
+        console.error('Error:', err)
+      }
+    }
+
+    marcarLeidos()
+  }, [conversationId, senderId, supabase])
+
+  // Intersection Observer para marcar como leído cuando es visible
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      async (entries) => {
+        for (const entry of entries) {
+          const msgId = entry.target.getAttribute('data-msg-id')
+          if (!msgId) continue
+
+          if (entry.isIntersecting && !markedAsReadRef.current.has(msgId)) {
+            const msg = messages.find(m => m.id === msgId)
+            if (msg && !msg.read && msg.sender_id !== senderId) {
+              setTimeout(async () => {
+                await supabase
+                  .from('messages')
+                  .update({ read: true })
+                  .eq('id', msgId)
+
+                markedAsReadRef.current.add(msgId)
+                setMessages(prev =>
+                  prev.map(m => m.id === msgId ? { ...m, read: true } : m)
+                )
+                window.dispatchEvent(new CustomEvent('mensajes-leidos'))
+              }, 300)
+            }
+          }
+        }
+      },
+      { threshold: 0.5 }
+    )
+
+    return () => observerRef.current?.disconnect()
+  }, [messages, senderId, supabase])
+
+  // Realtime — nuevos mensajes
   useEffect(() => {
     const channel = supabase
       .channel(`conversation:${conversationId}`)
@@ -64,15 +120,12 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
           .single()
         if (data) {
           setMessages(prev => [...prev, data])
-          if (payload.new.sender_id !== senderId) {
-            await supabase.from('messages').update({ read: true }).eq('id', payload.new.id)
-            window.dispatchEvent(new CustomEvent('mensajes-leidos'))
-          }
         }
       })
       .subscribe()
+
     return () => { supabase.removeChannel(channel) }
-  }, [conversationId, senderId])
+  }, [conversationId, senderId, supabase])
 
   function handleMedia(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -91,37 +144,54 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     if (!content.trim() && !media) return
     setLoading(true)
 
-    let media_url = null
-    let media_type = null
+    try {
+      let media_url = null
+      let media_type = null
 
-    if (media) {
-      const ext = media.name.split('.').pop()
-      const path = `${senderId}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage
-        .from('post')
-        .upload(path, media, {
-          contentType: media.type,
-          upsert: false
-        })
-      if (!error) {
-        const { data } = supabase.storage.from('post').getPublicUrl(path)
+      if (media) {
+        const ext = media.name.split('.').pop()
+        const path = `${senderId}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('posts')
+          .upload(path, media, {
+            contentType: media.type,
+            upsert: false
+          })
+
+        if (uploadError) {
+          alert('Error al subir archivo: ' + uploadError.message)
+          setLoading(false)
+          return
+        }
+
+        const { data } = supabase.storage.from('posts').getPublicUrl(path)
         media_url = data.publicUrl
         media_type = media.type.startsWith('video') ? 'video' : 'image'
       }
+
+      const { error: msgError } = await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: senderId,
+        content: content.trim() || '',
+        media_url,
+        media_type,
+      })
+
+      if (msgError) {
+        alert('Error al enviar mensaje: ' + msgError.message)
+        setLoading(false)
+        return
+      }
+
+      setContent('')
+      setMedia(null)
+      setPreview(null)
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al enviar')
+    } finally {
+      setLoading(false)
     }
-
-    await supabase.from('messages').insert({
-      conversation_id: conversationId,
-      sender_id: senderId,
-      content: content.trim(),
-      media_url,
-      media_type,
-    })
-
-    setContent('')
-    setMedia(null)
-    setPreview(null)
-    setLoading(false)
   }
 
   return (
@@ -130,7 +200,11 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
         {messages.map(msg => {
           const isOwn = msg.sender_id === senderId
           return (
-            <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div
+              key={msg.id}
+              data-msg-id={msg.id}
+              className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+            >
               <div
                 className={`max-w-xs rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'rounded-br-sm' : 'rounded-bl-sm'}`}
                 style={{
@@ -146,20 +220,13 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
                   <video src={msg.media_url} controls className="w-full rounded-xl mb-2 max-h-48" />
                 )}
                 {msg.content && <p>{msg.content}</p>}
+
                 {isOwn && (
-                  <div className="flex justify-end mt-1 gap-0.5">
+                  <div className="flex justify-end mt-1 gap-0.5 text-xs opacity-60">
                     {msg.read ? (
-                      <>
-                        <span style={{ fontSize: 8, opacity: 0.9 }}>💧</span>
-                        <span style={{ fontSize: 8, opacity: 0.9 }}>💧</span>
-                        <span style={{ fontSize: 8, opacity: 0.9 }}>💧</span>
-                        <span style={{ fontSize: 8, opacity: 0.9 }}>💧</span>
-                      </>
+                      <span>✓✓</span>
                     ) : (
-                      <>
-                        <span style={{ fontSize: 8, opacity: 0.5 }}>💧</span>
-                        <span style={{ fontSize: 8, opacity: 0.5 }}>💧</span>
-                      </>
+                      <span>✓</span>
                     )}
                   </div>
                 )}
@@ -170,7 +237,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
         <div ref={bottomRef} />
       </div>
 
-      {/* Preview media */}
       {preview && (
         <div className="fixed bottom-36 left-0 right-0 px-4">
           <div className="max-w-xl mx-auto relative inline-block">

@@ -12,17 +12,16 @@ interface MensajesBadgeProps {
 }
 
 export default function MensajesBadge({ userId, initialCount }: MensajesBadgeProps) {
-  const [count, setCount] = useState(initialCount)
-  const supabase = createClient()
   const pathname = usePathname()
-  const enChatRef = useRef(false)
+  const enChat = pathname.startsWith('/mensajes/') && pathname !== '/mensajes'
+  
+  const [count, setCount] = useState(enChat ? 0 : initialCount)
+  const supabase = createClient()
+  const prevPathnameRef = useRef(pathname)
 
-  enChatRef.current = pathname.startsWith('/mensajes/') && pathname !== '/mensajes'
-  const displayCount = enChatRef.current ? 0 : count
+  const displayCount = enChat ? 0 : count
 
   const fetchCount = useCallback(async () => {
-    if (enChatRef.current) return
-
     const { data: convs } = await supabase
       .from('conversations')
       .select('id')
@@ -44,15 +43,21 @@ export default function MensajesBadge({ userId, initialCount }: MensajesBadgePro
     setCount(unread ?? 0)
   }, [userId, supabase])
 
+  // Detectar cuando SALE del chat y refetch real
   useEffect(() => {
-    fetchCount()
+    const prevPathname = prevPathnameRef.current
+    const wasInChat = prevPathname.startsWith('/mensajes/') && prevPathname !== '/mensajes'
+    const isNowInChat = pathname.startsWith('/mensajes/') && pathname !== '/mensajes'
+
+    if (wasInChat && !isNowInChat) {
+      // Acaba de SALIR del chat
+      fetchCount()
+    }
+
+    prevPathnameRef.current = pathname
   }, [pathname, fetchCount])
 
-  useEffect(() => {
-    window.addEventListener('mensajes-leidos', fetchCount)
-    return () => window.removeEventListener('mensajes-leidos', fetchCount)
-  }, [fetchCount])
-
+  // Realtime para nuevos mensajes
   useEffect(() => {
     const channel = supabase
       .channel(`mensajes_badge:${userId}`)
@@ -74,6 +79,6 @@ export default function MensajesBadge({ userId, initialCount }: MensajesBadgePro
           {displayCount > 9 ? '9+' : displayCount}
         </span>
       ) : null}
-    </Link> 
+    </Link>
   )
-} 
+}

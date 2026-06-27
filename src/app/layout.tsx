@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: 'petricor',
   description: 'la comunidad que huele a tierra mojada',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/petricor-icon.svg',
+    apple: '/icon-192.png',
+  },
 }
 
 export default function RootLayout({

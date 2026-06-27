@@ -35,11 +35,11 @@ export default function FollowButton({ followerId, followingId, initialFollowing
     <button
       onClick={handleFollow}
       disabled={loading}
-      className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${
-        following
-          ? 'bg-stone-800 text-stone-300 hover:bg-stone-700'
-          : 'bg-stone-200 text-stone-900 hover:bg-white'
-      }`}
+      className="px-4 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+      style={following
+        ? { background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+        : { background: 'var(--text)', color: 'var(--bg)' }
+      }
     >
       {loading ? '...' : following ? 'siguiendo' : 'seguir'}
     </button>

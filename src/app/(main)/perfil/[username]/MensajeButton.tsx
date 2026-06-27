@@ -4,7 +4,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 
-export default function MensajeButton({ currentUserId, targetUserId }: { currentUserId: string, targetUserId: string }) {
+export default function MensajeButton({
+  currentUserId,
+  targetUserId
+}: {
+  currentUserId: string
+  targetUserId: string
+}) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -35,7 +41,10 @@ export default function MensajeButton({ currentUserId, targetUserId }: { current
   return (
     <button
       onClick={handleMessage}
-      className="text-stone-500 hover:text-stone-300 transition-colors ml-2"
+      className="transition-colors ml-1"
+      style={{ color: 'var(--text-muted)' }}
+      onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
     >
       <MessageCircle size={20} />
     </button>

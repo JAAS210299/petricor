@@ -20,7 +20,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at, image_url, user_id,
+      id, content, created_at, image_url, user_id, media_url, media_type,
       profiles (id, username, avatar_url),
       likes (id, user_id),
       comments (id)
@@ -42,7 +42,7 @@ export default async function FeedPage() {
         <h1 className="text-sm font-light tracking-widest mb-8" style={{ color: 'var(--text-muted)' }}>
           petricor
         </h1>
-        <NuevoPost />
+        <NuevoPost userId={user.id} />
         <div className="mt-8">
           <FeedList
             initialPosts={sortedPosts}

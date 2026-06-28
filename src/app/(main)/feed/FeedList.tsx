@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { MessageCircle } from 'lucide-react'
 import LikeButton from '@/components/LikeButton'
+import LikeComentarioButton from '@/components/LikeComentarioButton'
 import ComentarioInline from './ComentarioInline'
 import AudioPlayer from '@/components/AudioPlayer'
 import { createClient } from '@/lib/supabase/client'
@@ -32,7 +33,7 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
     setLoadingComments(true)
     const { data } = await supabase
       .from('comments')
-      .select('id, content, created_at, media_url, media_type, profiles(username, avatar_url)')
+      .select('id, content, created_at, media_url, media_type, profiles(username, avatar_url), comment_likes(id, user_id)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
     setCommentsMap(prev => ({ ...prev, [postId]: data ?? [] }))
@@ -87,13 +88,10 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
   }, [hasMore, loading, posts.length])
 
   function handleCommentSuccess(postId: string) {
-    // Actualizar contador en el post
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p
-      const prevComments = (p.comments as any[]) ?? []
-      return { ...p, comments: [...prevComments, { id: 'temp' }] }
+      return { ...p, comments: [...((p.comments as any[]) ?? []), { id: 'temp' }] }
     }))
-    // Recargar comentarios del panel
     loadComments(postId)
   }
 
@@ -182,7 +180,7 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
               </p>
             </div>
 
-            {/* Panel de comentarios */}
+            {/* Panel comentarios */}
             {isOpen && (
               <div style={{ borderTop: '1px solid var(--border)' }}>
 
@@ -197,6 +195,10 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
                     {comments.map((comment: any) => {
                       const cUsername = comment.profiles?.username
                       const cAvatar = comment.profiles?.avatar_url
+                      const commentLikes = (comment.comment_likes as any[]) ?? []
+                      const likeCount = commentLikes.length
+                      const liked = commentLikes.some((l: any) => l.user_id === userId)
+
                       return (
                         <div key={comment.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                           <Link href={`/perfil/${cUsername}`} style={{ flexShrink: 0 }}>
@@ -241,11 +243,19 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
                               </div>
                             )}
 
-                            <p style={{ fontSize: '11px', color: 'var(--text-subtle)', marginTop: '4px', paddingLeft: '4px' }}>
-                              {new Date(comment.created_at).toLocaleDateString('es-ES', {
-                                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', paddingLeft: '4px' }}>
+                              <p style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
+                                {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </p>
+                              <LikeComentarioButton
+                                commentId={comment.id}
+                                initialLikes={likeCount}
+                                initialLiked={liked}
+                                userId={userId}
+                              />
+                            </div>
                           </div>
                         </div>
                       )
@@ -268,7 +278,6 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
                 )}
               </div>
             )}
-
           </div>
         )
       })}

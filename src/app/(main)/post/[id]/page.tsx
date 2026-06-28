@@ -6,6 +6,7 @@ import ComentarioForm from './ComentarioForm'
 import EliminarPost from './EliminarPost'
 import EliminarComentario from './EliminarComentario'
 import AudioPlayer from '@/components/AudioPlayer'
+import LikeComentarioButton from '@/components/LikeComentarioButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +29,11 @@ export default async function PostPage({
 
   const { data: comments } = await supabase
     .from('comments')
-    .select(`id, user_id, post_id, content, created_at, media_url, media_type, profiles (username, avatar_url)`)
+    .select(`
+      id, user_id, post_id, content, created_at, media_url, media_type,
+      profiles (username, avatar_url),
+      comment_likes (id, user_id)
+    `)
     .eq('post_id', id)
     .order('created_at', { ascending: true })
 
@@ -89,53 +94,66 @@ export default async function PostPage({
           <p className="text-xs tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
             {comments?.length ?? 0} comentarios
           </p>
-          {comments?.map((comment: any) => (
-            <div key={comment.id} className="flex gap-3">
-              <Link href={`/perfil/${(comment.profiles as any)?.username}`}>
-                {(comment.profiles as any)?.avatar_url ? (
-                  <img src={(comment.profiles as any).avatar_url} alt="avatar" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
-                    {(comment.profiles as any)?.username?.[0]?.toUpperCase()}
-                  </div>
-                )}
-              </Link>
-              <div className="flex-1">
-                {/* Cabecera comentario: username + botón eliminar */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                    {(comment.profiles as any)?.username}
-                  </span>
-                  {user && (
-                    <EliminarComentario
-                      comentarioId={comment.id}
-                      userId={user.id}
-                      ownerId={comment.user_id}
-                    />
+          {comments?.map((comment: any) => {
+            const commentLikes = (comment.comment_likes as any[]) ?? []
+            const likeCount = commentLikes.length
+            const liked = commentLikes.some((l: any) => l.user_id === user?.id)
+
+            return (
+              <div key={comment.id} className="flex gap-3">
+                <Link href={`/perfil/${(comment.profiles as any)?.username}`}>
+                  {(comment.profiles as any)?.avatar_url ? (
+                    <img src={(comment.profiles as any).avatar_url} alt="avatar" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5" style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
+                      {(comment.profiles as any)?.username?.[0]?.toUpperCase()}
+                    </div>
                   )}
-                </div>
-                {comment.content && (
-                  <p className="text-sm mt-0.5 leading-relaxed" style={{ color: 'var(--text)' }}>{comment.content}</p>
-                )}
-                {comment.media_url && comment.media_type === 'image' && (
-                  <img src={comment.media_url} alt="imagen" className="w-full rounded-lg mt-2 object-cover max-h-40" />
-                )}
-                {comment.media_url && comment.media_type === 'video' && (
-                  <video src={comment.media_url} controls className="w-full rounded-lg mt-2 max-h-40" />
-                )}
-                {comment.media_url && comment.media_type === 'audio' && (
-                  <div className="mt-2">
-                    <AudioPlayer src={comment.media_url} isOwn={false} />
+                </Link>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                      {(comment.profiles as any)?.username}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <LikeComentarioButton
+                        commentId={comment.id}
+                        initialLikes={likeCount}
+                        initialLiked={liked}
+                        userId={user?.id ?? null}
+                      />
+                      {user && (
+                        <EliminarComentario
+                          comentarioId={comment.id}
+                          userId={user.id}
+                          ownerId={comment.user_id}
+                        />
+                      )}
+                    </div>
                   </div>
-                )}
-                <p className="text-xs mt-1" style={{ color: 'var(--text-subtle)' }}>
-                  {new Date(comment.created_at).toLocaleDateString('es-ES', {
-                    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                  })}
-                </p>
+                  {comment.content && (
+                    <p className="text-sm mt-0.5 leading-relaxed" style={{ color: 'var(--text)' }}>{comment.content}</p>
+                  )}
+                  {comment.media_url && comment.media_type === 'image' && (
+                    <img src={comment.media_url} alt="imagen" className="w-full rounded-lg mt-2 object-cover max-h-40" />
+                  )}
+                  {comment.media_url && comment.media_type === 'video' && (
+                    <video src={comment.media_url} controls className="w-full rounded-lg mt-2 max-h-40" />
+                  )}
+                  {comment.media_url && comment.media_type === 'audio' && (
+                    <div className="mt-2">
+                      <AudioPlayer src={comment.media_url} isOwn={false} />
+                    </div>
+                  )}
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-subtle)' }}>
+                    {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {user && <ComentarioForm postId={id} userId={user.id} />}

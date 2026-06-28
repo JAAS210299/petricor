@@ -24,7 +24,7 @@ export default async function MainLayout({
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('read', false)
+      .eq('is_read', false)  // ← corregido
     notifCount = nc || 0
 
     const { data: convs } = await supabase

@@ -117,6 +117,11 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
         else if (media.type.includes('image')) media_type = 'image'
       }
 
+      console.log('userId al comentar:', userId)
+      console.log('postId:', postId)
+      console.log('media_url:', media_url)
+      console.log('media_type:', media_type)
+
       const { error } = await supabase.from('comments').insert({
         post_id: postId,
         user_id: userId,
@@ -269,6 +274,8 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
           rows={1}
         />
       </div>
+
+      
 
       {/* Contador */}
       {hasAudio && (

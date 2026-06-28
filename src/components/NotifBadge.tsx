@@ -23,7 +23,7 @@ export default function NotifBadge({ userId, initialCount }: NotifBadgeProps) {
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('read', false)
+      .eq('is_read', false)
 
     if (!error && freshCount !== null) {
       setCount(freshCount)

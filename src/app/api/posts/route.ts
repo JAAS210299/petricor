@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const { data: posts, error } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at, image_url, media_url, media_type, user_id,
+      id, content, created_at, image_url, media_url, media_type, user_id, edited_at,
       profiles (id, username, avatar_url),
       likes (id, user_id),
       comments (

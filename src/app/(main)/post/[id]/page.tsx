@@ -6,6 +6,7 @@ import ComentarioForm from './ComentarioForm'
 import EliminarPost from './EliminarPost'
 import AudioPlayer from '@/components/AudioPlayer'
 import ComentariosLista from './ComentariosLista'
+import PostBody from './PostBody'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export default async function PostPage({
   const { data: comments } = await supabase
     .from('comments')
     .select(`
-      id, user_id, post_id, content, created_at, media_url, media_type, parent_id,
+      id, user_id, post_id, content, created_at, media_url, media_type, parent_id, edited_at,
       profiles (username, avatar_url),
       comment_likes (id, user_id)
     `)
@@ -63,9 +64,14 @@ export default async function PostPage({
             {user && <EliminarPost postId={post.id} userId={user.id} ownerId={post.user_id} />}
           </div>
 
-          {post.content && (
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
-          )}
+          <PostBody
+            postId={post.id}
+            userId={user?.id ?? null}
+            ownerId={post.user_id}
+            initialContent={post.content ?? ''}
+            initialEditedAt={post.edited_at ?? null}
+          />
+
           {post.media_url && post.media_type === 'image' && (
             <img src={post.media_url} alt="imagen del post" className="w-full rounded-lg mt-3 object-cover max-h-96" />
           )}
@@ -87,7 +93,7 @@ export default async function PostPage({
           </p>
         </div>
 
-        {/* Comentarios con replies */}
+        {/* Comentarios con replies y edición */}
         <ComentariosLista
           initialComments={comments ?? []}
           postId={id}

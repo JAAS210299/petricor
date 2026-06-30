@@ -20,7 +20,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at, image_url, user_id, media_url, media_type,
+      id, content, created_at, image_url, user_id, media_url, media_type, edited_at,
       profiles (id, username, avatar_url),
       likes (id, user_id),
       comments (id)

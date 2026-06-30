@@ -11,6 +11,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import { createClient } from '@/lib/supabase/client'
 import TextConHashtags from '@/components/TextConHashtags'
 import MentionTextarea from '@/components/MentionTextarea'
+import LazyImage from '@/components/LazyImage'
 
 interface FeedListProps {
   initialPosts: any[]
@@ -271,7 +272,12 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
             )}
 
             {comment.media_url && comment.media_type === 'image' && (
-              <img src={comment.media_url} alt="imagen" style={{ display: 'block', marginTop: '6px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover' }} />
+              <LazyImage
+                src={comment.media_url}
+                alt="imagen"
+                className="rounded-lg mt-1.5"
+                style={{ height: '140px', width: '100%' }}
+              />
             )}
             {comment.media_url && comment.media_type === 'video' && (
               <video src={comment.media_url} controls style={{ display: 'block', marginTop: '6px', maxHeight: '120px', borderRadius: '8px', width: '100%' }} />
@@ -457,12 +463,12 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
 
               {post.image_url && !post.media_url && (
                 <Link href={`/post/${post.id}`} className="block mt-3">
-                  <img src={post.image_url} alt="imagen" className="w-full rounded-lg object-cover max-h-80" />
+                  <LazyImage src={post.image_url} alt="imagen" className="rounded-lg" style={{ height: '280px', width: '100%' }} />
                 </Link>
               )}
               {post.media_url && post.media_type === 'image' && (
                 <Link href={`/post/${post.id}`} className="block mt-3">
-                  <img src={post.media_url} alt="imagen" className="w-full rounded-lg object-cover max-h-80" />
+                  <LazyImage src={post.media_url} alt="imagen" className="rounded-lg" style={{ height: '280px', width: '100%' }} />
                 </Link>
               )}
               {post.media_url && post.media_type === 'video' && (

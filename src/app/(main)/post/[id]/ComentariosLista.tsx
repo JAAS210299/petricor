@@ -155,7 +155,7 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
             )}
 
             {comment.media_url && comment.media_type === 'image' && (
-              <img src={comment.media_url} alt="imagen" className="w-full rounded-lg mt-2 object-cover max-h-40" />
+              <img src={comment.media_url} alt="imagen" loading="lazy" className="w-full rounded-lg mt-2 object-cover max-h-40" />
             )}
             {comment.media_url && comment.media_type === 'video' && (
               <video src={comment.media_url} controls className="w-full rounded-lg mt-2 max-h-40" />

@@ -73,7 +73,7 @@ export default async function PostPage({
           />
 
           {post.media_url && post.media_type === 'image' && (
-            <img src={post.media_url} alt="imagen del post" className="w-full rounded-lg mt-3 object-cover max-h-96" />
+            <img src={post.media_url} alt="imagen del post" loading="lazy" className="w-full rounded-lg mt-3 object-cover max-h-96" />
           )}
           {post.media_url && post.media_type === 'video' && (
             <video src={post.media_url} controls className="w-full rounded-lg mt-3 max-h-96" />
@@ -84,7 +84,7 @@ export default async function PostPage({
             </div>
           )}
           {post.image_url && (
-            <img src={post.image_url} alt="imagen del post" className="w-full rounded-lg mt-3 object-cover max-h-96" />
+            <img src={post.image_url} alt="imagen del post" loading="lazy" className="w-full rounded-lg mt-3 object-cover max-h-96" />
           )}
           <p className="text-xs mt-4" style={{ color: 'var(--text-subtle)' }}>
             {new Date(post.created_at).toLocaleDateString('es-ES', {

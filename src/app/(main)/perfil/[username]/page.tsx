@@ -58,6 +58,7 @@ export default async function PerfilUsuarioPage(props: {
               <img
                 src={profile.avatar_url}
                 alt="avatar"
+                loading="lazy"
                 className="w-14 h-14 rounded-full object-cover"
               />
             ) : (
@@ -127,18 +128,10 @@ export default async function PerfilUsuarioPage(props: {
               style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
             >
               {post.image_url && !post.media_url && (
-                <img
-                  src={post.image_url}
-                  alt="imagen"
-                  className="w-full rounded-lg mb-3 object-cover max-h-64"
-                />
+                <img src={post.image_url} alt="imagen" loading="lazy" className="w-full rounded-lg mb-3 object-cover max-h-64" />
               )}
               {post.media_url && post.media_type === 'image' && (
-                <img
-                  src={post.media_url}
-                  alt="imagen"
-                  className="w-full rounded-lg mb-3 object-cover max-h-64"
-                />
+                <img src={post.media_url} alt="imagen" loading="lazy" className="w-full rounded-lg mb-3 object-cover max-h-64" />
               )}
               {post.media_url && post.media_type === 'video' && (
                 <video

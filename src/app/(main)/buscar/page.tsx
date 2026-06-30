@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search } from 'lucide-react'
+import { Search, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import TextConHashtags from '@/components/TextConHashtags'
@@ -13,6 +13,11 @@ interface Profile {
   avatar_url: string | null
 }
 
+interface TrendingTag {
+  hashtag: string
+  count: number
+}
+
 export default function BuscarPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -20,13 +25,23 @@ export default function BuscarPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [trending, setTrending] = useState<TrendingTag[]>([])
+  const [loadingTrending, setLoadingTrending] = useState(true)
   const supabase = createClient()
 
   const isHashtag = query.trim().startsWith('#')
 
   useEffect(() => {
     if (query.trim()) handleSearch(query)
+    loadTrending()
   }, [])
+
+  async function loadTrending() {
+    setLoadingTrending(true)
+    const { data, error } = await supabase.rpc('get_trending_hashtags', { limit_count: 10 })
+    if (!error && data) setTrending(data)
+    setLoadingTrending(false)
+  }
 
   async function handleSearch(value: string) {
     setQuery(value)
@@ -55,6 +70,18 @@ export default function BuscarPage() {
     setLoading(false)
   }
 
+  function handleTrendingClick(tag: string) {
+    handleSearch(tag)
+    router.push(`/buscar?q=${encodeURIComponent(tag)}`, { scroll: false })
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setProfiles([])
+    setPosts([])
+    router.push('/buscar', { scroll: false })
+  }
+
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <div className="max-w-xl mx-auto px-4 py-8">
@@ -74,7 +101,60 @@ export default function BuscarPage() {
             className="bg-transparent text-sm outline-none w-full"
             style={{ color: 'var(--text)' }}
           />
+          {query && (
+            <button onClick={clearSearch} className="text-xs transition-opacity hover:opacity-60"
+              style={{ color: 'var(--text-subtle)' }}>
+              limpiar
+            </button>
+          )}
         </div>
+
+        {/* Trending — solo cuando no hay búsqueda activa */}
+        {!query.trim() && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={15} style={{ color: '#60a5fa' }} />
+              <p className="text-xs tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                tendencias de la semana
+              </p>
+            </div>
+
+            {loadingTrending && (
+              <p className="text-sm text-center mt-8 animate-pulse" style={{ color: 'var(--text-subtle)' }}>
+                cargando tendencias...
+              </p>
+            )}
+
+            {!loadingTrending && trending.length === 0 && (
+              <p className="text-sm text-center mt-8" style={{ color: 'var(--text-subtle)' }}>
+                aún no hay tendencias esta semana
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {trending.map((tag, i) => (
+                <button
+                  key={tag.hashtag}
+                  onClick={() => handleTrendingClick(tag.hashtag)}
+                  className="flex items-center justify-between rounded-xl p-3 text-left transition-opacity hover:opacity-70"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs w-4 text-right" style={{ color: 'var(--text-subtle)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium" style={{ color: '#60a5fa' }}>
+                      {tag.hashtag}
+                    </span>
+                  </div>
+                  <span className="text-xs" style={{ color: 'var(--text-subtle)' }}>
+                    {tag.count} {tag.count === 1 ? 'publicación' : 'publicaciones'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isHashtag && query.trim() && (
           <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
@@ -95,7 +175,6 @@ export default function BuscarPage() {
             </p>
           )}
 
-          {/* Usuarios */}
           {profiles.map(profile => (
             <Link
               key={profile.id}
@@ -115,7 +194,6 @@ export default function BuscarPage() {
             </Link>
           ))}
 
-          {/* Posts con hashtag */}
           {posts.map(post => (
             <div
               key={post.id}

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('') // email o username
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,9 +15,29 @@ export default function LoginPage() {
   async function handleLogin() {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    let emailToUse = identifier.trim()
+
+    // Si no contiene @, es un username → buscar el email
+    if (!emailToUse.includes('@')) {
+      const { data, error: fnError } = await supabase
+        .rpc('get_email_from_username', { p_username: emailToUse.toLowerCase() })
+
+      if (fnError || !data) {
+        setError('usuario no encontrado')
+        setLoading(false)
+        return
+      }
+      emailToUse = data
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password,
+    })
+
     if (error) {
-      setError(error.message)
+      setError('correo/usuario o contraseña incorrectos')
       setLoading(false)
     } else {
       router.push('/feed')
@@ -25,42 +45,46 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-stone-950">
+    <main className="min-h-screen flex flex-col items-center justify-center" style={{ background: 'var(--bg)' }}>
       <div className="w-full max-w-sm px-8">
-        <h1 className="text-3xl font-light tracking-widest text-stone-200 mb-2">
+        <h1 className="text-3xl font-light tracking-widest mb-2" style={{ color: 'var(--text)' }}>
           petricor
         </h1>
-        <p className="text-stone-500 text-sm mb-10">bienvenido de vuelta</p>
+        <p className="text-sm mb-10" style={{ color: 'var(--text-muted)' }}>bienvenido de vuelta</p>
 
         <div className="flex flex-col gap-4">
           <input
-            type="email"
-            placeholder="correo electrónico"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-stone-600 transition-colors placeholder:text-stone-600"
+            type="text"
+            placeholder="usuario o correo electrónico"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            className="rounded-lg px-4 py-3 text-sm outline-none transition-colors"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)' }}
           />
           <input
             type="password"
             placeholder="contraseña"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-stone-600 transition-colors placeholder:text-stone-600"
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            className="rounded-lg px-4 py-3 text-sm outline-none transition-colors"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)' }}
           />
 
-          {error && (
-            <p className="text-red-400 text-xs">{error}</p>
-          )}
+          {error && <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>}
 
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="bg-stone-200 text-stone-900 rounded-lg py-3 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 mt-2"
+            className="rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 mt-2"
+            style={{ background: 'var(--text)', color: 'var(--bg)' }}
           >
             {loading ? 'entrando...' : 'entrar'}
           </button>
 
-          <a href="/registro" className="text-stone-500 text-xs text-center hover:text-stone-300 transition-colors">
+          <a href="/registro" className="text-xs text-center transition-opacity hover:opacity-60"
+            style={{ color: 'var(--text-muted)' }}>
             ¿no tienes cuenta? regístrate
           </a>
         </div>

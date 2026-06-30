@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X } from 'lucide-react'
+import MentionTextarea from '@/components/MentionTextarea'
 
 interface Props {
   postId: string
@@ -29,8 +30,7 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
   const charLimit = hasAudio ? MAX_CHARS : undefined
   const overLimit = charLimit !== undefined && content.length > charLimit
 
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value
+  function handleContentChange(val: string) {
     if (charLimit !== undefined && val.length > charLimit) return
     setContent(val)
   }
@@ -56,17 +56,12 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
       audioChunksRef.current = []
       setRecording(true)
       setRecordingTime(0)
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
-      }
-
+      mediaRecorder.ondataavailable = (event) => { audioChunksRef.current.push(event.data) }
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         setMedia(new File([audioBlob], 'audio.webm', { type: 'audio/webm' }))
         setPreview('recording-complete')
       }
-
       mediaRecorder.start()
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1)
@@ -84,8 +79,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current)
     }
   }
-
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
 
   async function handleComment() {
     if (!content.trim() && !media) return
@@ -117,11 +110,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
         else if (media.type.includes('image')) media_type = 'image'
       }
 
-      console.log('userId al comentar:', userId)
-      console.log('postId:', postId)
-      console.log('media_url:', media_url)
-      console.log('media_type:', media_type)
-
       const { error } = await supabase.from('comments').insert({
         post_id: postId,
         user_id: userId,
@@ -151,7 +139,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
   return (
     <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--border)' }}>
 
-      {/* Preview imagen/video */}
       {preview && preview !== 'recording-complete' && (
         <div style={{ marginBottom: '10px', position: 'relative', display: 'inline-block' }}>
           {media?.type.includes('video') ? (
@@ -171,7 +158,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
         </div>
       )}
 
-      {/* Audio listo */}
       {preview === 'recording-complete' && (
         <div style={{
           marginBottom: '10px', padding: '8px 12px',
@@ -189,18 +175,16 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
         </div>
       )}
 
-      {/* Grabando */}
       {recording && (
         <div style={{
           marginBottom: '10px', padding: '8px 12px',
           background: '#ef4444', color: 'white', borderRadius: '8px', fontSize: '13px'
         }}>
-          🔴 Grabando: {formatTime(recordingTime)}
+          🔴 Grabando: {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-        {/* IMG — deshabilitado si hay audio */}
         <button
           onClick={() => fileRef.current?.click()}
           disabled={!!hasAudio}
@@ -215,7 +199,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
           📷 IMG
         </button>
 
-        {/* AUDIO / STOP */}
         {recording ? (
           <button onClick={stopRecording} style={{
             padding: '10px 6px', background: '#ef4444', color: 'white',
@@ -244,7 +227,6 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
 
         <div />
 
-        {/* ENVIAR */}
         <button
           onClick={handleComment}
           disabled={loading || (!content.trim() && !media) || recording || overLimit}
@@ -259,25 +241,24 @@ export default function ComentarioInline({ postId, userId, onSuccess }: Props) {
           ✓ ENVIAR
         </button>
 
-        <textarea
-          placeholder="Comentario..."
-          value={content}
-          onChange={handleContentChange}
-          style={{
-            gridColumn: '1 / -1',
-            padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit',
-            color: 'var(--text)', background: 'var(--bg-input)',
-            border: `1px solid ${overLimit ? '#ef4444' : 'var(--border)'}`,
-            borderRadius: '6px', resize: 'none',
-            minHeight: '40px', maxHeight: '100px', outline: 'none'
-          }}
-          rows={1}
-        />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <MentionTextarea
+            value={content}
+            onChange={handleContentChange}
+            placeholder="Comentario... usa @ para mencionar"
+            style={{
+              width: '100%',
+              padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit',
+              color: 'var(--text)', background: 'var(--bg-input)',
+              border: `1px solid ${overLimit ? '#ef4444' : 'var(--border)'}`,
+              borderRadius: '6px', resize: 'none',
+              minHeight: '40px', maxHeight: '100px', outline: 'none'
+            }}
+            rows={1}
+          />
+        </div>
       </div>
 
-      
-
-      {/* Contador */}
       {hasAudio && (
         <p style={{ fontSize: '11px', textAlign: 'right', marginTop: '4px', color: overLimit ? '#ef4444' : 'var(--text-subtle)' }}>
           {content.length}/{MAX_CHARS}

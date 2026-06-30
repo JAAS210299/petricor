@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MessageCircle, Send } from 'lucide-react'
 import LikeButton from '@/components/LikeButton'
 import LikeComentarioButton from '@/components/LikeComentarioButton'
 import ComentarioInline from './ComentarioInline'
 import AudioPlayer from '@/components/AudioPlayer'
 import { createClient } from '@/lib/supabase/client'
+import TextConHashtags from '@/components/TextConHashtags'
+import MentionTextarea from '@/components/MentionTextarea'
 
 interface FeedListProps {
   initialPosts: any[]
@@ -22,8 +25,12 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
   const [openCommentId, setOpenCommentId] = useState<string | null>(null)
   const [commentsMap, setCommentsMap] = useState<Record<string, any[]>>({})
   const [loadingComments, setLoadingComments] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [replyLoading, setReplyLoading] = useState(false)
   const observerTarget = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     setPosts(initialPosts)
@@ -33,7 +40,7 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
     setLoadingComments(true)
     const { data } = await supabase
       .from('comments')
-      .select('id, content, created_at, media_url, media_type, profiles(username, avatar_url), comment_likes(id, user_id)')
+      .select('id, content, created_at, media_url, media_type, parent_id, user_id, profiles(username, avatar_url), comment_likes(id, user_id)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
     setCommentsMap(prev => ({ ...prev, [postId]: data ?? [] }))
@@ -48,6 +55,21 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
       setOpenCommentId(postId)
       loadComments(postId)
     }
+  }
+
+  async function handleReply(postId: string, parentId: string) {
+    if (!replyContent.trim() || !userId) return
+    setReplyLoading(true)
+    await supabase.from('comments').insert({
+      post_id: postId,
+      user_id: userId,
+      content: replyContent.trim(),
+      parent_id: parentId,
+    })
+    setReplyContent('')
+    setReplyingTo(null)
+    setReplyLoading(false)
+    loadComments(postId)
   }
 
   const loadMorePosts = async () => {
@@ -95,6 +117,124 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
     loadComments(postId)
   }
 
+  function renderComment(comment: any, postId: string, allComments: any[], isReply = false) {
+    const cUsername = comment.profiles?.username
+    const cAvatar = comment.profiles?.avatar_url
+    const commentLikes = (comment.comment_likes as any[]) ?? []
+    const likeCount = commentLikes.length
+    const liked = commentLikes.some((l: any) => l.user_id === userId)
+    const commentReplies = allComments.filter((c: any) => c.parent_id === comment.id)
+
+    return (
+      <div key={comment.id} style={{ marginLeft: isReply ? '32px' : '0', marginTop: isReply ? '8px' : '0' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+          <Link href={`/perfil/${cUsername}`} style={{ flexShrink: 0 }}>
+            {cAvatar ? (
+              <img src={cAvatar} alt="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: 'var(--bg-input)', color: 'var(--text)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '11px', fontWeight: 'bold', flexShrink: 0
+              }}>
+                {cUsername?.[0]?.toUpperCase()}
+              </div>
+            )}
+          </Link>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              background: 'var(--bg-input)', borderRadius: '12px',
+              padding: '8px 12px', display: 'inline-block', maxWidth: '100%'
+            }}>
+              <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: comment.content ? '2px' : '0' }}>
+                {cUsername}
+              </p>
+              {comment.content && (
+                <TextConHashtags
+                  text={comment.content}
+                  style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.4', display: 'block' }}
+                />
+              )}
+            </div>
+
+            {comment.media_url && comment.media_type === 'image' && (
+              <img src={comment.media_url} alt="imagen" style={{ display: 'block', marginTop: '6px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover' }} />
+            )}
+            {comment.media_url && comment.media_type === 'video' && (
+              <video src={comment.media_url} controls style={{ display: 'block', marginTop: '6px', maxHeight: '120px', borderRadius: '8px', width: '100%' }} />
+            )}
+            {comment.media_url && comment.media_type === 'audio' && (
+              <div style={{ marginTop: '6px' }}>
+                <AudioPlayer src={comment.media_url} isOwn={false} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', paddingLeft: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
+                {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                })}
+              </p>
+              <LikeComentarioButton commentId={comment.id} initialLikes={likeCount} initialLiked={liked} userId={userId} />
+              {!isReply && userId && (
+                <button
+                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  style={{ fontSize: '11px', color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  responder
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Reply form inline */}
+        {replyingTo === comment.id && userId && (
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', marginLeft: '38px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <MentionTextarea
+                as="input"
+                value={replyContent}
+                onChange={setReplyContent}
+                onKeyDown={e => e.key === 'Enter' && handleReply(postId, comment.id)}
+                placeholder="responder... usa @ para mencionar"
+                autoFocus
+                style={{
+                  width: '100%', fontSize: '13px', outline: 'none',
+                  color: 'var(--text)', background: 'var(--bg-input)',
+                  borderRadius: '8px', padding: '6px 10px',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+            <button
+              onClick={() => handleReply(postId, comment.id)}
+              disabled={replyLoading || !replyContent.trim()}
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', opacity: replyLoading || !replyContent.trim() ? 0.3 : 1 }}
+            >
+              <Send size={14} />
+            </button>
+            <button
+              onClick={() => { setReplyingTo(null); setReplyContent('') }}
+              style={{ fontSize: '11px', color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              cancelar
+            </button>
+          </div>
+        )}
+
+        {/* Replies anidadas */}
+        {commentReplies.length > 0 && (
+          <div style={{ marginTop: '6px' }}>
+            {commentReplies.map((reply: any) => renderComment(reply, postId, allComments, true))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {posts.length === 0 && (
@@ -111,7 +251,8 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
         const avatarUrl = (post.profiles as any)?.avatar_url
         const isFollowed = followingIds.includes((post.profiles as any)?.id)
         const isOpen = openCommentId === post.id
-        const comments = commentsMap[post.id] ?? []
+        const allComments = commentsMap[post.id] ?? []
+        const topLevelComments = allComments.filter((c: any) => !c.parent_id)
 
         return (
           <div key={post.id} className="rounded-xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -135,12 +276,15 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
               )}
             </div>
 
-            {/* Contenido */}
+            {/* Contenido — div con navegación programática en vez de Link, para no anidar <a> con los hashtags */}
             <div className="px-5 pt-3 pb-3">
               {post.content && (
-                <Link href={`/post/${post.id}`} className="block">
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
-                </Link>
+                <div
+                  onClick={() => router.push(`/post/${post.id}`)}
+                  className="cursor-pointer"
+                >
+                  <TextConHashtags text={post.content} style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text)' }} />
+                </div>
               )}
               {post.image_url && !post.media_url && (
                 <Link href={`/post/${post.id}`} className="block mt-3">
@@ -183,87 +327,19 @@ export default function FeedList({ initialPosts, followingIds, userId }: FeedLis
             {/* Panel comentarios */}
             {isOpen && (
               <div style={{ borderTop: '1px solid var(--border)' }}>
-
                 {loadingComments && (
                   <p className="text-xs text-center py-4 animate-pulse" style={{ color: 'var(--text-subtle)' }}>
                     cargando comentarios...
                   </p>
                 )}
 
-                {!loadingComments && comments.length > 0 && (
+                {!loadingComments && topLevelComments.length > 0 && (
                   <div style={{ padding: '12px 20px 8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {comments.map((comment: any) => {
-                      const cUsername = comment.profiles?.username
-                      const cAvatar = comment.profiles?.avatar_url
-                      const commentLikes = (comment.comment_likes as any[]) ?? []
-                      const likeCount = commentLikes.length
-                      const liked = commentLikes.some((l: any) => l.user_id === userId)
-
-                      return (
-                        <div key={comment.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                          <Link href={`/perfil/${cUsername}`} style={{ flexShrink: 0 }}>
-                            {cAvatar ? (
-                              <img src={cAvatar} alt="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{
-                                width: '28px', height: '28px', borderRadius: '50%',
-                                background: 'var(--bg-input)', color: 'var(--text)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '11px', fontWeight: 'bold', flexShrink: 0
-                              }}>
-                                {cUsername?.[0]?.toUpperCase()}
-                              </div>
-                            )}
-                          </Link>
-
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              background: 'var(--bg-input)', borderRadius: '12px',
-                              padding: '8px 12px', display: 'inline-block', maxWidth: '100%'
-                            }}>
-                              <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: comment.content ? '2px' : '0' }}>
-                                {cUsername}
-                              </p>
-                              {comment.content && (
-                                <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.4', margin: 0 }}>
-                                  {comment.content}
-                                </p>
-                              )}
-                            </div>
-
-                            {comment.media_url && comment.media_type === 'image' && (
-                              <img src={comment.media_url} alt="imagen" style={{ display: 'block', marginTop: '6px', maxHeight: '160px', borderRadius: '8px', objectFit: 'cover' }} />
-                            )}
-                            {comment.media_url && comment.media_type === 'video' && (
-                              <video src={comment.media_url} controls style={{ display: 'block', marginTop: '6px', maxHeight: '160px', borderRadius: '8px', width: '100%' }} />
-                            )}
-                            {comment.media_url && comment.media_type === 'audio' && (
-                              <div style={{ marginTop: '6px' }}>
-                                <AudioPlayer src={comment.media_url} isOwn={false} />
-                              </div>
-                            )}
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', paddingLeft: '4px' }}>
-                              <p style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
-                                {new Date(comment.created_at).toLocaleDateString('es-ES', {
-                                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                                })}
-                              </p>
-                              <LikeComentarioButton
-                                commentId={comment.id}
-                                initialLikes={likeCount}
-                                initialLiked={liked}
-                                userId={userId}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {topLevelComments.map((comment: any) => renderComment(comment, post.id, allComments))}
                   </div>
                 )}
 
-                {!loadingComments && comments.length === 0 && (
+                {!loadingComments && topLevelComments.length === 0 && (
                   <p className="text-xs text-center py-4" style={{ color: 'var(--text-subtle)' }}>
                     sé el primero en comentar
                   </p>

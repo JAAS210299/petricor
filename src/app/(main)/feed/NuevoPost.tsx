@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ImagePlus, X, Mic, Square, Send } from 'lucide-react'
+import MentionTextarea from '@/components/MentionTextarea'
 
 interface Props {
   userId: string
@@ -48,8 +49,9 @@ export default function NuevoPost({ userId }: Props) {
   const charLimit = hasAudio ? MAX_CHARS : undefined
   const overLimit = charLimit !== undefined && content.length > charLimit
 
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value
+  const hashtags = [...new Set(content.match(/#\w+/g) ?? [])]
+
+  function handleContentChange(val: string) {
     if (charLimit !== undefined && val.length > charLimit) return
     setContent(val)
   }
@@ -75,17 +77,12 @@ export default function NuevoPost({ userId }: Props) {
       audioChunksRef.current = []
       setRecording(true)
       setRecordingTime(0)
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
-      }
-
+      mediaRecorder.ondataavailable = (event) => { audioChunksRef.current.push(event.data) }
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         setMedia(new File([audioBlob], 'audio.webm', { type: 'audio/webm' }))
         setPreview('recording-complete')
       }
-
       mediaRecorder.start()
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1)
@@ -167,24 +164,33 @@ export default function NuevoPost({ userId }: Props) {
 
   return (
     <div className="rounded-2xl p-5 mb-6 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-
-      <textarea
-        placeholder="¿Qué está pasando?"
+      <MentionTextarea
         value={content}
         onChange={handleContentChange}
+        placeholder="¿Qué está pasando? usa #hashtags y @menciona"
         className="w-full bg-transparent text-base outline-none resize-none placeholder:opacity-40"
         style={{ color: 'var(--text)' }}
         rows={3}
       />
 
-      {/* Contador de caracteres (solo si hay audio) */}
+      {/* Preview hashtags detectados */}
+      {hashtags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {hashtags.map(tag => (
+            <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--bg-input)', color: '#60a5fa' }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
       {hasAudio && (
         <p className="text-xs text-right mb-2" style={{ color: overLimit ? '#ef4444' : 'var(--text-subtle)' }}>
           {content.length}/{MAX_CHARS}
         </p>
       )}
 
-      {/* Preview imagen/video */}
       {preview && preview !== 'recording-complete' && (
         <div className="mt-2 relative inline-block">
           {media?.type.includes('video') ? (
@@ -192,31 +198,24 @@ export default function NuevoPost({ userId }: Props) {
           ) : media?.type.includes('image') ? (
             <img src={preview} alt="preview" className="h-40 rounded-xl object-cover" />
           ) : null}
-          <button
-            onClick={removeMedia}
+          <button onClick={removeMedia}
             className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center"
-            style={{ background: 'var(--text)', color: 'var(--bg)' }}
-          >
+            style={{ background: 'var(--text)', color: 'var(--bg)' }}>
             <X size={10} />
           </button>
         </div>
       )}
 
-      {/* Preview audio */}
       {preview === 'recording-complete' && (
         <div className="mt-2 flex items-center gap-3 p-2 rounded-lg" style={{ background: 'var(--bg-input)' }}>
           <AudioPlayerPreview src={URL.createObjectURL(media!)} />
-          <button
-            onClick={removeMedia}
-            className="text-xs px-2 py-1 rounded ml-auto"
-            style={{ background: 'var(--border)', color: 'var(--text)' }}
-          >
+          <button onClick={removeMedia} className="text-xs px-2 py-1 rounded ml-auto"
+            style={{ background: 'var(--border)', color: 'var(--text)' }}>
             Quitar
           </button>
         </div>
       )}
 
-      {/* Grabando */}
       {recording && (
         <div className="mt-3 bg-red-500 text-white px-4 py-2 rounded-xl flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -226,42 +225,30 @@ export default function NuevoPost({ userId }: Props) {
 
       <div className="flex gap-3 mt-4 items-center justify-between">
         <div className="flex gap-2">
-          {/* IMG — deshabilitado si ya hay audio */}
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={!!hasAudio}
+          <button onClick={() => fileRef.current?.click()} disabled={!!hasAudio}
             className="transition-opacity hover:opacity-60 disabled:opacity-30"
-            style={{ color: 'var(--text-muted)' }}
-            title={hasAudio ? 'No se puede combinar imagen con audio' : 'Adjuntar imagen o video'}
-          >
+            style={{ color: 'var(--text-muted)' }} title={hasAudio ? 'No se puede combinar imagen con audio' : 'Adjuntar imagen o video'}>
             <ImagePlus size={18} />
           </button>
           <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleMedia} className="hidden" />
 
-          {/* AUDIO — deshabilitado si hay imagen/video */}
           {recording ? (
             <button onClick={stopRecording} className="transition-opacity hover:opacity-60" style={{ color: '#ef4444' }}>
               <Square size={18} fill="currentColor" />
             </button>
           ) : (
-            <button
-              onClick={startRecording}
-              disabled={!!(media && !hasAudio)}
+            <button onClick={startRecording} disabled={!!(media && !hasAudio)}
               className="transition-opacity hover:opacity-60 disabled:opacity-30"
-              style={{ color: 'var(--text-muted)' }}
-              title={media && !hasAudio ? 'No se puede combinar audio con imagen/video' : 'Grabar nota de voz'}
-            >
+              style={{ color: 'var(--text-muted)' }} title={media && !hasAudio ? 'No se puede combinar audio con imagen/video' : 'Grabar nota de voz'}>
               <Mic size={18} />
             </button>
           )}
         </div>
 
-        <button
-          onClick={handlePublish}
+        <button onClick={handlePublish}
           disabled={loading || (!content.trim() && !media) || recording || overLimit}
           className="transition-opacity hover:opacity-60 disabled:opacity-30"
-          style={{ color: 'var(--text-muted)' }}
-        >
+          style={{ color: 'var(--text-muted)' }}>
           <Send size={18} />
         </button>
       </div>

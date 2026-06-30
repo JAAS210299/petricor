@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X } from 'lucide-react'
+import MentionTextarea from '@/components/MentionTextarea'
 
 interface Props {
   postId: string
@@ -28,8 +29,7 @@ export default function ComentarForm({ postId, userId }: Props) {
   const charLimit = hasAudio ? MAX_CHARS : undefined
   const overLimit = charLimit !== undefined && content.length > charLimit
 
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value
+  function handleContentChange(val: string) {
     if (charLimit !== undefined && val.length > charLimit) return
     setContent(val)
   }
@@ -55,17 +55,12 @@ export default function ComentarForm({ postId, userId }: Props) {
       audioChunksRef.current = []
       setRecording(true)
       setRecordingTime(0)
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
-      }
-
+      mediaRecorder.ondataavailable = (event) => { audioChunksRef.current.push(event.data) }
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         setMedia(new File([audioBlob], 'audio.webm', { type: 'audio/webm' }))
         setPreview('recording-complete')
       }
-
       mediaRecorder.start()
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1)
@@ -145,7 +140,6 @@ export default function ComentarForm({ postId, userId }: Props) {
   return (
     <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
 
-      {/* Preview imagen/video */}
       {preview && preview !== 'recording-complete' && (
         <div style={{ marginBottom: '10px', position: 'relative', display: 'inline-block' }}>
           {media?.type.includes('video') ? (
@@ -165,7 +159,6 @@ export default function ComentarForm({ postId, userId }: Props) {
         </div>
       )}
 
-      {/* Audio listo */}
       {preview === 'recording-complete' && (
         <div style={{
           marginBottom: '10px', padding: '8px 12px',
@@ -183,7 +176,6 @@ export default function ComentarForm({ postId, userId }: Props) {
         </div>
       )}
 
-      {/* Grabando */}
       {recording && (
         <div style={{
           marginBottom: '10px', padding: '8px 12px',
@@ -193,9 +185,7 @@ export default function ComentarForm({ postId, userId }: Props) {
         </div>
       )}
 
-      {/* Grid botones + textarea */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-        {/* IMG — deshabilitado si hay audio */}
         <button
           onClick={() => fileRef.current?.click()}
           disabled={!!hasAudio}
@@ -210,7 +200,6 @@ export default function ComentarForm({ postId, userId }: Props) {
           📷 IMG
         </button>
 
-        {/* AUDIO / STOP */}
         {recording ? (
           <button onClick={stopRecording} style={{
             padding: '12px 8px', background: '#ef4444', color: 'white',
@@ -239,7 +228,6 @@ export default function ComentarForm({ postId, userId }: Props) {
 
         <div />
 
-        {/* ENVIAR */}
         <button
           onClick={handleComment}
           disabled={loading || (!content.trim() && !media) || recording || overLimit}
@@ -254,23 +242,24 @@ export default function ComentarForm({ postId, userId }: Props) {
           ✓ ENVIAR
         </button>
 
-        <textarea
-          placeholder="Comentario..."
-          value={content}
-          onChange={handleContentChange}
-          style={{
-            gridColumn: '1 / -1',
-            padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit',
-            color: 'var(--text)', background: 'var(--bg-input)',
-            border: `1px solid ${overLimit ? '#ef4444' : 'var(--border)'}`,
-            borderRadius: '6px', resize: 'none',
-            minHeight: '40px', maxHeight: '100px', outline: 'none'
-          }}
-          rows={1}
-        />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <MentionTextarea
+            value={content}
+            onChange={handleContentChange}
+            placeholder="Comentario... usa @ para mencionar"
+            style={{
+              width: '100%',
+              padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit',
+              color: 'var(--text)', background: 'var(--bg-input)',
+              border: `1px solid ${overLimit ? '#ef4444' : 'var(--border)'}`,
+              borderRadius: '6px', resize: 'none',
+              minHeight: '40px', maxHeight: '100px', outline: 'none'
+            }}
+            rows={1}
+          />
+        </div>
       </div>
 
-      {/* Contador */}
       {hasAudio && (
         <p style={{ fontSize: '11px', textAlign: 'right', color: overLimit ? '#ef4444' : 'var(--text-subtle)' }}>
           {content.length}/{MAX_CHARS}

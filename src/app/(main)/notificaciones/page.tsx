@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Heart, MessageCircle, UserPlus } from 'lucide-react'
+import { Heart, MessageCircle, UserPlus, CornerDownRight } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -16,7 +16,6 @@ export default async function NotificacionesPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // No-bloqueante: si falla el UPDATE no rompe la página
   supabase
     .from('notifications')
     .update({ is_read: true })
@@ -28,6 +27,7 @@ export default async function NotificacionesPage() {
     like:         <Heart size={14} style={{ color: '#fb7185' }} />,
     comment_like: <Heart size={14} style={{ color: '#fb7185' }} />,
     comment:      <MessageCircle size={14} style={{ color: '#60a5fa' }} />,
+    reply:        <CornerDownRight size={14} style={{ color: '#a78bfa' }} />,
     follow:       <UserPlus size={14} style={{ color: '#4ade80' }} />,
   }
 
@@ -35,6 +35,7 @@ export default async function NotificacionesPage() {
     like:         'le dio me gusta a tu publicación',
     comment_like: 'le dio me gusta a tu comentario',
     comment:      'comentó tu publicación',
+    reply:        'respondió a tu comentario',
     follow:       'empezó a seguirte',
   }
 
@@ -63,20 +64,13 @@ export default async function NotificacionesPage() {
               }}
             >
               {(n.notifier as any)?.avatar_url ? (
-                <img
-                  src={(n.notifier as any).avatar_url}
-                  alt="avatar"
-                  className="w-8 h-8 rounded-full object-cover shrink-0"
-                />
+                <img src={(n.notifier as any).avatar_url} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
               ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0"
-                  style={{ background: 'var(--bg-input)', color: 'var(--text)' }}
-                >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0"
+                  style={{ background: 'var(--bg-input)', color: 'var(--text)' }}>
                   {(n.notifier as any)?.username?.[0]?.toUpperCase()}
                 </div>
               )}
-
               <div className="flex-1 min-w-0">
                 <p className="text-sm" style={{ color: 'var(--text)' }}>
                   <span className="font-medium">@{(n.notifier as any)?.username}</span>
@@ -88,7 +82,6 @@ export default async function NotificacionesPage() {
                   })}
                 </p>
               </div>
-
               <div className="shrink-0">{iconMap[n.type]}</div>
             </Link>
           ))}

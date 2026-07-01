@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Heart, MessageCircle, UserPlus, CornerDownRight } from 'lucide-react'
+import { Heart, MessageCircle, UserPlus, CornerDownRight, AtSign } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -28,6 +28,7 @@ export default async function NotificacionesPage() {
     comment_like: <Heart size={14} style={{ color: '#fb7185' }} />,
     comment:      <MessageCircle size={14} style={{ color: '#60a5fa' }} />,
     reply:        <CornerDownRight size={14} style={{ color: '#a78bfa' }} />,
+    mention:      <AtSign size={14} style={{ color: '#34d399' }} />,
     follow:       <UserPlus size={14} style={{ color: '#4ade80' }} />,
   }
 
@@ -36,6 +37,7 @@ export default async function NotificacionesPage() {
     comment_like: 'le dio me gusta a tu comentario',
     comment:      'comentó tu publicación',
     reply:        'respondió a tu comentario',
+    mention:      'te mencionó en una publicación',
     follow:       'empezó a seguirte',
   }
 

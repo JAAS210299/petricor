@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import NotifBadge from '@/components/NotifBadge'
 import MensajesBadge from '@/components/MensajesBadge'
 import Link from 'next/link'
-import { Home, Search, PlusSquare, User } from 'lucide-react'
+import { Home, Compass, PlusSquare, User } from 'lucide-react'
 
 export default async function MainLayout({
   children,
@@ -24,7 +24,7 @@ export default async function MainLayout({
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('is_read', false)  // ← corregido
+      .eq('is_read', false)
     notifCount = nc || 0
 
     const { data: convs } = await supabase
@@ -52,8 +52,8 @@ export default async function MainLayout({
           <Link href="/feed" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
             <Home size={22} />
           </Link>
-          <Link href="/buscar" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
-            <Search size={22} />
+          <Link href="/explorar" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
+            <Compass size={22} />
           </Link>
           <Link href="/nuevo" style={{ color: 'var(--text-muted)' }} className="hover:opacity-70 transition-opacity">
             <PlusSquare size={22} />

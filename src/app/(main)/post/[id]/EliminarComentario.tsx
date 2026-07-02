@@ -1,19 +1,19 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 
 export default function EliminarComentario({
   comentarioId,
   userId,
-  ownerId
+  ownerId,
+  onDelete,
 }: {
   comentarioId: string
   userId: string
   ownerId: string
+  onDelete?: (id: string) => void
 }) {
-  const router = useRouter()
   const supabase = createClient()
 
   if (userId !== ownerId) return null
@@ -21,7 +21,7 @@ export default function EliminarComentario({
   async function handleDelete() {
     if (!confirm('¿Eliminar este comentario?')) return
     await supabase.from('comments').delete().eq('id', comentarioId)
-    router.refresh()
+    onDelete?.(comentarioId)
   }
 
   return (

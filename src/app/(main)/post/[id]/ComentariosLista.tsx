@@ -60,6 +60,10 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
     refreshComments()
   }
 
+  function handleDelete(id: string) {
+    setComments(prev => prev.filter((c: any) => c.id !== id))
+  }
+
   const topLevel = comments.filter((c: any) => !c.parent_id)
   const allReplies = comments.filter((c: any) => c.parent_id)
   const repliesMap: Record<string, any[]> = {}
@@ -106,6 +110,7 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
                     comentarioId={comment.id}
                     userId={userId}
                     ownerId={comment.user_id}
+                    onDelete={handleDelete}
                   />
                 )}
               </div>

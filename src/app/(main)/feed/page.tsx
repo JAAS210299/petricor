@@ -17,6 +17,18 @@ export default async function FeedPage() {
 
   const followingIds = following?.map(f => f.following_id) ?? []
 
+  // Obtener bloqueos en ambas direcciones para filtrar el feed
+  const { data: blocksData } = await supabase
+    .from('blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`)
+
+  const blockedUserIds = new Set<string>()
+  blocksData?.forEach(b => {
+    if (b.blocker_id === user.id) blockedUserIds.add(b.blocked_id)
+    if (b.blocked_id === user.id) blockedUserIds.add(b.blocker_id)
+  })
+
   const { data: posts } = await supabase
     .from('posts')
     .select(`
@@ -28,7 +40,9 @@ export default async function FeedPage() {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  const sortedPosts = [...(posts ?? [])].sort((a, b) => {
+  const filteredPosts = (posts ?? []).filter(p => !blockedUserIds.has(p.user_id))
+
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
     const aFollowed = followingIds.includes((a.profiles as any)?.id)
     const bFollowed = followingIds.includes((b.profiles as any)?.id)
     if (aFollowed && !bFollowed) return -1

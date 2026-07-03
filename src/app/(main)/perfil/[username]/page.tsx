@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import FollowButton from './FollowButton'
 import MensajeButton from './MensajeButton'
+import BloquearButton from './BloquearButton'
 import Link from 'next/link'
 
 export default async function PerfilUsuarioPage(props: {
@@ -20,6 +21,28 @@ export default async function PerfilUsuarioPage(props: {
     .maybeSingle()
 
   if (!profile) notFound()
+
+  // Si el visitante bloqueó a este perfil o fue bloqueado por él, no se muestra contenido normal
+  let iBlockedThem = false
+  let theyBlockedMe = false
+
+  if (user) {
+    const { data: blockData } = await supabase
+      .from('blocks')
+      .select('blocker_id, blocked_id')
+      .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${profile.id}),and(blocker_id.eq.${profile.id},blocked_id.eq.${user.id})`)
+
+    iBlockedThem = blockData?.some(b => b.blocker_id === user.id) ?? false
+    theyBlockedMe = blockData?.some(b => b.blocker_id === profile.id) ?? false
+  }
+
+  if (theyBlockedMe) {
+    return (
+      <main className="min-h-screen pb-24 flex items-center justify-center" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+        <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>este perfil no está disponible</p>
+      </main>
+    )
+  }
 
   const { data: posts } = await supabase
     .from('posts')
@@ -79,14 +102,24 @@ export default async function PerfilUsuarioPage(props: {
 
           {!isOwnProfile && user && (
             <div className="flex items-center gap-2">
-              <FollowButton
-                followerId={user.id}
-                followingId={profile.id}
-                initialFollowing={isFollowing}
-              />
-              <MensajeButton
+              {!iBlockedThem && (
+                <>
+                  <FollowButton
+                    followerId={user.id}
+                    followingId={profile.id}
+                    initialFollowing={isFollowing}
+                  />
+                  <MensajeButton
+                    currentUserId={user.id}
+                    targetUserId={profile.id}
+                  />
+                </>
+              )}
+              <BloquearButton
                 currentUserId={user.id}
                 targetUserId={profile.id}
+                targetUsername={profile.username}
+                initialBlocked={iBlockedThem}
               />
             </div>
           )}
@@ -116,12 +149,17 @@ export default async function PerfilUsuarioPage(props: {
 
         {/* Posts */}
         <div className="flex flex-col gap-4">
-          {posts?.length === 0 && (
+          {iBlockedThem && (
+            <p className="text-sm text-center mt-8" style={{ color: 'var(--text-subtle)' }}>
+              has bloqueado a este usuario
+            </p>
+          )}
+          {!iBlockedThem && posts?.length === 0 && (
             <p className="text-sm text-center mt-8" style={{ color: 'var(--text-subtle)' }}>
               aún no ha publicado nada
             </p>
           )}
-          {posts?.map(post => (
+          {!iBlockedThem && posts?.map(post => (
             <div
               key={post.id}
               className="rounded-xl p-5 border"

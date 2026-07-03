@@ -49,6 +49,13 @@ export default async function PerfilPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/perfil/bloqueados"
+              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              bloqueados
+            </Link>
+            <Link
               href="/perfil/editar"
               className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}

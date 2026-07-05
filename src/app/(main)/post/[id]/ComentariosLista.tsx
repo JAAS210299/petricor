@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Flag } from 'lucide-react'
 import AudioPlayer from '@/components/AudioPlayer'
 import LikeComentarioButton from '@/components/LikeComentarioButton'
 import EliminarComentario from './EliminarComentario'
 import ReplyForm from './ReplyForm'
 import TextConHashtags from '@/components/TextConHashtags'
 import MentionTextarea from '@/components/MentionTextarea'
+import ReportarModal from '@/components/ReportarModal'
 
 interface Props {
   initialComments: any[]
@@ -22,6 +24,7 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [editLoading, setEditLoading] = useState(false)
+  const [reportingId, setReportingId] = useState<string | null>(null)
   const supabase = createClient()
 
   async function refreshComments() {
@@ -112,6 +115,15 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
                     ownerId={comment.user_id}
                     onDelete={handleDelete}
                   />
+                )}
+                {userId && userId !== comment.user_id && (
+                  <button
+                    onClick={() => setReportingId(comment.id)}
+                    className="transition-opacity hover:opacity-60"
+                    style={{ color: 'var(--text-subtle)' }}
+                  >
+                    <Flag size={12} />
+                  </button>
                 )}
               </div>
             </div>
@@ -228,6 +240,13 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
         {topLevel.length} comentarios
       </p>
       {topLevel.map((c: any) => renderComment(c))}
+      {reportingId && userId && (
+        <ReportarModal
+          reporterId={userId}
+          commentId={reportingId}
+          onClose={() => setReportingId(null)}
+        />
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Send, Pencil } from 'lucide-react'
+import { MessageCircle, Send, Pencil, Flag } from 'lucide-react'
 import LikeButton from '@/components/LikeButton'
 import LikeComentarioButton from '@/components/LikeComentarioButton'
 import ComentarioInline from './ComentarioInline'
@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import TextConHashtags from '@/components/TextConHashtags'
 import MentionTextarea from '@/components/MentionTextarea'
 import LazyImage from '@/components/LazyImage'
+import ReportarModal from '@/components/ReportarModal'
 
 interface FeedListProps {
   initialPosts: any[]
@@ -39,6 +40,8 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentEditLoading, setCommentEditLoading] = useState(false)
+  const [reportingPostId, setReportingPostId] = useState<string | null>(null)
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
 
   const observerTarget = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -312,6 +315,14 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
                     editar
                   </button>
                 )}
+                {!isOwner && userId && (
+                  <button
+                    onClick={() => setReportingCommentId(comment.id)}
+                    style={{ fontSize: '11px', color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    reportar
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -411,6 +422,15 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
                     style={{ color: 'var(--text-subtle)' }}
                   >
                     <Pencil size={13} />
+                  </button>
+                )}
+                {!isOwnPost && userId && (
+                  <button
+                    onClick={() => setReportingPostId(post.id)}
+                    className="transition-opacity hover:opacity-60"
+                    style={{ color: 'var(--text-subtle)' }}
+                  >
+                    <Flag size={13} />
                   </button>
                 )}
               </div>
@@ -540,6 +560,21 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
           </p>
         )}
       </div>
+
+      {reportingPostId && userId && (
+        <ReportarModal
+          reporterId={userId}
+          postId={reportingPostId}
+          onClose={() => setReportingPostId(null)}
+        />
+      )}
+      {reportingCommentId && userId && (
+        <ReportarModal
+          reporterId={userId}
+          commentId={reportingCommentId}
+          onClose={() => setReportingCommentId(null)}
+        />
+      )}
     </div>
   )
 }

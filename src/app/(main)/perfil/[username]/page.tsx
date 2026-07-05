@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import FollowButton from './FollowButton'
 import MensajeButton from './MensajeButton'
 import BloquearButton from './BloquearButton'
+import PostsConReportar from './PostsConReportar'
+import ReportarPerfilButton from './ReportarPerfilButton'
 import Link from 'next/link'
 
 export default async function PerfilUsuarioPage(props: {
@@ -121,6 +123,10 @@ export default async function PerfilUsuarioPage(props: {
                 targetUsername={profile.username}
                 initialBlocked={iBlockedThem}
               />
+              <ReportarPerfilButton
+                reporterId={user.id}
+                reportedUserId={profile.id}
+              />
             </div>
           )}
         </div>
@@ -154,49 +160,9 @@ export default async function PerfilUsuarioPage(props: {
               has bloqueado a este usuario
             </p>
           )}
-          {!iBlockedThem && posts?.length === 0 && (
-            <p className="text-sm text-center mt-8" style={{ color: 'var(--text-subtle)' }}>
-              aún no ha publicado nada
-            </p>
+          {!iBlockedThem && (
+            <PostsConReportar posts={posts ?? []} currentUserId={user?.id ?? null} />
           )}
-          {!iBlockedThem && posts?.map(post => (
-            <div
-              key={post.id}
-              className="rounded-xl p-5 border"
-              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-            >
-              {post.image_url && !post.media_url && (
-                <img src={post.image_url} alt="imagen" loading="lazy" className="w-full rounded-lg mb-3 object-cover max-h-64" />
-              )}
-              {post.media_url && post.media_type === 'image' && (
-                <img src={post.media_url} alt="imagen" loading="lazy" className="w-full rounded-lg mb-3 object-cover max-h-64" />
-              )}
-              {post.media_url && post.media_type === 'video' && (
-                <video
-                  src={post.media_url}
-                  controls
-                  className="w-full rounded-lg mb-3 max-h-64"
-                />
-              )}
-              {post.media_url && post.media_type === 'audio' && (
-                <audio
-                  src={post.media_url}
-                  controls
-                  className="w-full mb-3"
-                />
-              )}
-              {post.content && (
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>
-                  {post.content}
-                </p>
-              )}
-              <p className="text-xs mt-3" style={{ color: 'var(--text-subtle)' }}>
-                {new Date(post.created_at).toLocaleDateString('es-ES', {
-                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                })}
-              </p>
-            </div>
-          ))}
         </div>
 
       </div>

@@ -31,6 +31,7 @@ export default async function PerfilPage() {
               <img
                 src={profile.avatar_url}
                 alt="avatar"
+                loading="lazy"
                 className="w-14 h-14 rounded-full object-cover"
               />
             ) : (
@@ -47,6 +48,22 @@ export default async function PerfilPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {profile?.is_admin && (
+              <Link
+                href="/admin/reportes"
+                className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                style={{ borderColor: '#ef444455', color: '#ef4444' }}
+              >
+                reportes
+              </Link>
+            )}
+            <Link
+              href="/perfil/bloqueados"
+              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              bloqueados
+            </Link>
             <Link
               href="/perfil/editar"
               className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
@@ -93,6 +110,7 @@ export default async function PerfilPage() {
                 <img
                   src={post.image_url}
                   alt="imagen"
+                  loading="lazy"
                   className="w-full rounded-lg mb-3 object-cover max-h-64"
                 />
               )}

@@ -48,6 +48,15 @@ export default async function PerfilPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {profile?.is_admin && (
+              <Link
+                href="/admin/reportes"
+                className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                style={{ borderColor: '#ef444455', color: '#ef4444' }}
+              >
+                reportes
+              </Link>
+            )}
             <Link
               href="/perfil/bloqueados"
               className="text-xs px-3 py-1.5 rounded-lg border transition-colors"

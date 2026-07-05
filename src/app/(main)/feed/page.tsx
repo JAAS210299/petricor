@@ -42,6 +42,7 @@ export default async function FeedPage() {
 
   const filteredPosts = (posts ?? []).filter(p => !blockedUserIds.has(p.user_id))
 
+
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     const aFollowed = followingIds.includes((a.profiles as any)?.id)
     const bFollowed = followingIds.includes((b.profiles as any)?.id)
@@ -63,6 +64,7 @@ export default async function FeedPage() {
             followingIds={followingIds}
             userId={user.id}
           />
+          /{'>'}
         </div>
       </div>
     </main>

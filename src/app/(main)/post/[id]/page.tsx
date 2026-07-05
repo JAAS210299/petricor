@@ -8,6 +8,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import ComentariosLista from './ComentariosLista'
 import PostBody from './PostBody'
 import ShareButton from '@/components/ShareButton'
+import SaveButton from '@/components/SaveButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,17 @@ export default async function PostPage({
     .single()
 
   if (!post) notFound()
+
+  let isSaved = false
+  if (user) {
+    const { data: savedRow } = await supabase
+      .from('saved_posts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('post_id', id)
+      .maybeSingle()
+    isSaved = !!savedRow
+  }
 
   const { data: comments } = await supabase
     .from('comments')
@@ -93,7 +105,10 @@ export default async function PostPage({
                 day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
               })}
             </p>
-            <ShareButton postId={post.id} size={14} />
+            <div className="flex items-center gap-3">
+              <SaveButton postId={post.id} userId={user?.id ?? null} initialSaved={isSaved} size={14} />
+              <ShareButton postId={post.id} size={14} />
+            </div>
           </div>
         </div>
 

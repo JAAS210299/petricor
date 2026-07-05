@@ -58,6 +58,13 @@ export default async function PerfilPage() {
               </Link>
             )}
             <Link
+              href="/perfil/guardados"
+              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              guardados
+            </Link>
+            <Link
               href="/perfil/bloqueados"
               className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}

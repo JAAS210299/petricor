@@ -14,14 +14,16 @@ import MentionTextarea from '@/components/MentionTextarea'
 import LazyImage from '@/components/LazyImage'
 import ReportarModal from '@/components/ReportarModal'
 import ShareButton from '@/components/ShareButton'
+import SaveButton from '@/components/SaveButton'
 
 interface FeedListProps {
   initialPosts: any[]
   followingIds: string[]
   userId: string | null
+  savedPostIds?: string[]
 }
 
-export default function FeedList({ initialPosts = [], followingIds, userId }: FeedListProps) {
+export default function FeedList({ initialPosts = [], followingIds, userId, savedPostIds = [] }: FeedListProps) {
   const [posts, setPosts] = useState<any[]>(initialPosts ?? [])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState((initialPosts ?? []).length === 20)
@@ -514,6 +516,11 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
                 <span className="text-xs">{commentCount}</span>
               </button>
               <ShareButton postId={post.id} />
+              <SaveButton
+                postId={post.id}
+                userId={userId}
+                initialSaved={savedPostIds.includes(post.id)}
+              />
               <p className="text-xs ml-auto" style={{ color: 'var(--text-subtle)' }}>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'

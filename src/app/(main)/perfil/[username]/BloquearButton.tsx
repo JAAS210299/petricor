@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Ban, ShieldCheck } from 'lucide-react'
+import ConfirmModal from '@/components/ConfirmModal'
 
 interface Props {
   currentUserId: string
@@ -15,6 +16,7 @@ interface Props {
 export default function BloquearButton({ currentUserId, targetUserId, targetUsername, initialBlocked }: Props) {
   const [blocked, setBlocked] = useState(initialBlocked)
   const [loading, setLoading] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -22,9 +24,6 @@ export default function BloquearButton({ currentUserId, targetUserId, targetUser
     setLoading(true)
 
     if (blocked) {
-      const confirmed = confirm(`¿Desbloquear a @${targetUsername}?`)
-      if (!confirmed) { setLoading(false); return }
-
       const { error } = await supabase
         .from('blocks')
         .delete()
@@ -38,9 +37,6 @@ export default function BloquearButton({ currentUserId, targetUserId, targetUser
       }
       setBlocked(false)
     } else {
-      const confirmed = confirm(`¿Bloquear a @${targetUsername}? No podrá ver tu perfil ni contactarte, y sus publicaciones dejarán de aparecer en tu feed.`)
-      if (!confirmed) { setLoading(false); return }
-
       await supabase.from('follows').delete()
         .eq('follower_id', currentUserId).eq('following_id', targetUserId)
       await supabase.from('follows').delete()
@@ -60,22 +56,41 @@ export default function BloquearButton({ currentUserId, targetUserId, targetUser
     }
 
     setLoading(false)
+    setShowConfirm(false)
     router.refresh()
   }
 
   return (
-    <button
-      onClick={handleToggleBlock}
-      disabled={loading}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-      style={
-        blocked
-          ? { background: 'var(--bg-input)', color: '#22c55e', border: '1px solid #22c55e33' }
-          : { background: 'var(--bg-input)', color: '#ef4444', border: '1px solid #ef444433' }
-      }
-    >
-      {blocked ? <ShieldCheck size={13} /> : <Ban size={13} />}
-      {loading ? '...' : blocked ? 'bloqueado' : 'bloquear'}
-    </button>
+    <>
+      <button
+        onClick={() => setShowConfirm(true)}
+        disabled={loading}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+        style={
+          blocked
+            ? { background: 'var(--bg-input)', color: '#22c55e', border: '1px solid #22c55e33' }
+            : { background: 'var(--bg-input)', color: '#ef4444', border: '1px solid #ef444433' }
+        }
+      >
+        {blocked ? <ShieldCheck size={13} /> : <Ban size={13} />}
+        {blocked ? 'bloqueado' : 'bloquear'}
+      </button>
+
+      {showConfirm && (
+        <ConfirmModal
+          title={blocked ? 'Desbloquear usuario' : 'Bloquear usuario'}
+          message={
+            blocked
+              ? `¿Desbloquear a @${targetUsername}?`
+              : `¿Bloquear a @${targetUsername}? No podrá ver tu perfil ni contactarte, y sus publicaciones dejarán de aparecer en tu feed.`
+          }
+          confirmText={blocked ? 'desbloquear' : 'bloquear'}
+          danger={!blocked}
+          loading={loading}
+          onConfirm={handleToggleBlock}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
+    </>
   )
 }

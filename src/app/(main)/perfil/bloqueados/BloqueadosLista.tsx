@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ShieldCheck } from 'lucide-react'
+import ConfirmModal from '@/components/ConfirmModal'
 
 interface BlockedProfile {
   id: string
@@ -19,28 +20,31 @@ interface Props {
 
 export default function BloqueadosLista({ initialBlocked, currentUserId }: Props) {
   const [blocked, setBlocked] = useState(initialBlocked)
-  const [unblockingId, setUnblockingId] = useState<string | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
-  async function handleUnblock(id: string, username: string) {
-    const confirmed = confirm(`¿Desbloquear a @${username}?`)
-    if (!confirmed) return
+  const confirmingPerson = blocked.find(p => p.id === confirmingId)
 
-    setUnblockingId(id)
+  async function handleUnblock() {
+    if (!confirmingId) return
+    setLoading(true)
+
     const { error } = await supabase
       .from('blocks')
       .delete()
       .eq('blocker_id', currentUserId)
-      .eq('blocked_id', id)
+      .eq('blocked_id', confirmingId)
+
+    setLoading(false)
 
     if (error) {
       alert('Error al desbloquear: ' + error.message)
-      setUnblockingId(null)
       return
     }
 
-    setBlocked(prev => prev.filter(p => p.id !== id))
-    setUnblockingId(null)
+    setBlocked(prev => prev.filter(p => p.id !== confirmingId))
+    setConfirmingId(null)
   }
 
   if (blocked.length === 0) {
@@ -82,16 +86,27 @@ export default function BloqueadosLista({ initialBlocked, currentUserId }: Props
           </Link>
 
           <button
-            onClick={() => handleUnblock(person.id, person.username)}
-            disabled={unblockingId === person.id}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 shrink-0"
+            onClick={() => setConfirmingId(person.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
             style={{ background: 'var(--bg-input)', color: 'var(--text)' }}
           >
             <ShieldCheck size={13} />
-            {unblockingId === person.id ? '...' : 'desbloquear'}
+            desbloquear
           </button>
         </div>
       ))}
+
+      {confirmingPerson && (
+        <ConfirmModal
+          title="Desbloquear usuario"
+          message={`¿Desbloquear a @${confirmingPerson.username}?`}
+          confirmText="desbloquear"
+          danger={false}
+          loading={loading}
+          onConfirm={handleUnblock}
+          onCancel={() => setConfirmingId(null)}
+        />
+      )}
     </div>
   )
 }

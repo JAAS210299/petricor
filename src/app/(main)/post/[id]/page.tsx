@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import ComentarioForm from './ComentarioForm'
-import EliminarPost from './EliminarPost'
+import AccionesPost from './AccionesPost'
 import AudioPlayer from '@/components/AudioPlayer'
 import ComentariosLista from './ComentariosLista'
 import PostBody from './PostBody'
+import ShareButton from '@/components/ShareButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export default async function PostPage({
                 {(post.profiles as any)?.username}
               </span>
             </Link>
-            {user && <EliminarPost postId={post.id} userId={user.id} ownerId={post.user_id} />}
+            {user && <AccionesPost postId={post.id} userId={user.id} ownerId={post.user_id} />}
           </div>
 
           <PostBody
@@ -86,11 +87,14 @@ export default async function PostPage({
           {post.image_url && (
             <img src={post.image_url} alt="imagen del post" loading="lazy" className="w-full rounded-lg mt-3 object-cover max-h-96" />
           )}
-          <p className="text-xs mt-4" style={{ color: 'var(--text-subtle)' }}>
-            {new Date(post.created_at).toLocaleDateString('es-ES', {
-              day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-            })}
-          </p>
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-xs" style={{ color: 'var(--text-subtle)' }}>
+              {new Date(post.created_at).toLocaleDateString('es-ES', {
+                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+              })}
+            </p>
+            <ShareButton postId={post.id} size={14} />
+          </div>
         </div>
 
         {/* Comentarios con replies y edición */}

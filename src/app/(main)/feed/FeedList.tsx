@@ -13,6 +13,7 @@ import TextConHashtags from '@/components/TextConHashtags'
 import MentionTextarea from '@/components/MentionTextarea'
 import LazyImage from '@/components/LazyImage'
 import ReportarModal from '@/components/ReportarModal'
+import ShareButton from '@/components/ShareButton'
 
 interface FeedListProps {
   initialPosts: any[]
@@ -512,6 +513,7 @@ export default function FeedList({ initialPosts = [], followingIds, userId }: Fe
                 <MessageCircle size={15} />
                 <span className="text-xs">{commentCount}</span>
               </button>
+              <ShareButton postId={post.id} />
               <p className="text-xs ml-auto" style={{ color: 'var(--text-subtle)' }}>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'

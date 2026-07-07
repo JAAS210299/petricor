@@ -42,6 +42,12 @@ export default async function FeedPage() {
 
   const filteredPosts = (posts ?? []).filter(p => !blockedUserIds.has(p.user_id))
 
+  // IDs de posts guardados por el usuario actual
+  const { data: savedRows } = await supabase
+    .from('saved_posts')
+    .select('post_id')
+    .eq('user_id', user.id)
+  const savedPostIds = new Set(savedRows?.map(s => s.post_id) ?? [])
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     const aFollowed = followingIds.includes((a.profiles as any)?.id)
@@ -53,7 +59,7 @@ export default async function FeedPage() {
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
-      <div className="max-w-xl mx-auto px-4 py-8">
+      <div className="max-w-xl lg:max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-sm font-light tracking-widest mb-8" style={{ color: 'var(--text-muted)' }}>
           petricor
         </h1>
@@ -63,8 +69,8 @@ export default async function FeedPage() {
             initialPosts={sortedPosts}
             followingIds={followingIds}
             userId={user.id}
+            savedPostIds={Array.from(savedPostIds)}
           />
-          /{'>'}
         </div>
       </div>
     </main>

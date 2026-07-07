@@ -74,7 +74,7 @@ export default async function PerfilUsuarioPage(props: {
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
-      <div className="max-w-xl mx-auto px-4 py-8">
+      <div className="max-w-xl lg:max-w-2xl mx-auto px-4 py-8">
 
         {/* Cabecera */}
         <div className="flex items-center justify-between mb-8">

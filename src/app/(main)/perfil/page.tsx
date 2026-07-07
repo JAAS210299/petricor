@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import CerrarSesion from './CerrarSesion'
 import ThemeToggle from '@/components/ThemeToggle'
 import Link from 'next/link'
+import { Flag, Bookmark, Ban, Settings } from 'lucide-react'
+import AudioPlayer from '@/components/AudioPlayer'
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabaseClient()
@@ -24,8 +26,8 @@ export default async function PerfilPage() {
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
-      <div className="max-w-xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-xl lg:max-w-2xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             {profile?.avatar_url ? (
               <img
@@ -47,36 +49,40 @@ export default async function PerfilPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {profile?.is_admin && (
               <Link
                 href="/admin/reportes"
-                className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                title="Panel de reportes"
+                className="p-2 rounded-lg border transition-colors hover:opacity-70"
                 style={{ borderColor: '#ef444455', color: '#ef4444' }}
               >
-                reportes
+                <Flag size={16} />
               </Link>
             )}
             <Link
               href="/perfil/guardados"
-              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              title="Guardados"
+              className="p-2 rounded-lg border transition-colors hover:opacity-70"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >
-              guardados
+              <Bookmark size={16} />
             </Link>
             <Link
               href="/perfil/bloqueados"
-              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              title="Usuarios bloqueados"
+              className="p-2 rounded-lg border transition-colors hover:opacity-70"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >
-              bloqueados
+              <Ban size={16} />
             </Link>
             <Link
               href="/perfil/editar"
-              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              title="Editar perfil"
+              className="p-2 rounded-lg border transition-colors hover:opacity-70"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >
-              editar
+              <Settings size={16} />
             </Link>
             <ThemeToggle />
             <CerrarSesion />
@@ -113,7 +119,7 @@ export default async function PerfilPage() {
           )}
           {posts?.map(post => (
             <div key={post.id} className="rounded-xl p-5 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              {post.image_url && (
+              {post.image_url && !post.media_url && (
                 <img
                   src={post.image_url}
                   alt="imagen"
@@ -121,7 +127,25 @@ export default async function PerfilPage() {
                   className="w-full rounded-lg mb-3 object-cover max-h-64"
                 />
               )}
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
+              {post.media_url && post.media_type === 'image' && (
+                <img
+                  src={post.media_url}
+                  alt="imagen"
+                  loading="lazy"
+                  className="w-full rounded-lg mb-3 object-cover max-h-64"
+                />
+              )}
+              {post.media_url && post.media_type === 'video' && (
+                <video src={post.media_url} controls className="w-full rounded-lg mb-3 max-h-64" />
+              )}
+              {post.media_url && post.media_type === 'audio' && (
+                <div className="mb-3">
+                  <AudioPlayer src={post.media_url} isOwn={false} />
+                </div>
+              )}
+              {post.content && (
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
+              )}
               <p className="text-xs mt-3" style={{ color: 'var(--text-subtle)' }}>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'

@@ -52,7 +52,7 @@ export default async function PostPage({
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
-      <div className="max-w-xl mx-auto px-4 py-8">
+      <div className="max-w-xl lg:max-w-2xl mx-auto px-4 py-8">
 
         <Link href="/feed" className="flex items-center gap-2 mb-8 transition-opacity hover:opacity-60" style={{ color: 'var(--text-muted)' }}>
           <ArrowLeft size={18} />

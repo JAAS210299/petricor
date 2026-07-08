@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search, TrendingUp } from 'lucide-react'
+import { Search, TrendingUp, SlidersHorizontal, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import TextConHashtags from '@/components/TextConHashtags'
@@ -27,9 +27,17 @@ export default function BuscarPage() {
   const [loading, setLoading] = useState(false)
   const [trending, setTrending] = useState<TrendingTag[]>([])
   const [loadingTrending, setLoadingTrending] = useState(true)
+
+  // Filtros avanzados
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterUsername, setFilterUsername] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+
   const supabase = createClient()
 
   const isHashtag = query.trim().startsWith('#')
+  const hasActiveFilters = !!(filterUsername || filterDateFrom || filterDateTo)
 
   useEffect(() => {
     if (query.trim()) handleSearch(query)
@@ -47,16 +55,36 @@ export default function BuscarPage() {
     setQuery(value)
     setProfiles([])
     setPosts([])
-    if (!value.trim()) return
+    if (!value.trim() && !hasActiveFilters) return
     setLoading(true)
 
-    if (value.trim().startsWith('#')) {
-      const { data } = await supabase
+    const isTag = value.trim().startsWith('#')
+
+    // Si hay filtros de fecha/usuario activos, siempre buscamos posts (no perfiles)
+    if (isTag || hasActiveFilters) {
+      let q = supabase
         .from('posts')
-        .select('id, content, created_at, profiles(username, avatar_url)')
-        .ilike('content', `%${value.trim()}%`)
+        .select('id, content, created_at, media_url, media_type, profiles!inner(username, avatar_url)')
         .order('created_at', { ascending: false })
-        .limit(30)
+        .limit(50)
+
+      if (value.trim()) {
+        q = q.ilike('content', `%${value.trim()}%`)
+      }
+      if (filterUsername.trim()) {
+        q = q.ilike('profiles.username', `%${filterUsername.trim()}%`)
+      }
+      if (filterDateFrom) {
+        q = q.gte('created_at', new Date(filterDateFrom).toISOString())
+      }
+      if (filterDateTo) {
+        const end = new Date(filterDateTo)
+        end.setHours(23, 59, 59, 999)
+        q = q.lte('created_at', end.toISOString())
+      }
+
+      const { data, error } = await q
+      if (error) console.error(error)
       setPosts(data ?? [])
     } else {
       const { data } = await supabase
@@ -82,6 +110,19 @@ export default function BuscarPage() {
     router.push('/buscar', { scroll: false })
   }
 
+  function clearFilters() {
+    setFilterUsername('')
+    setFilterDateFrom('')
+    setFilterDateTo('')
+  }
+
+  function applyFilters() {
+    handleSearch(query)
+    setShowFilters(false)
+  }
+
+  const showResultsView = query.trim() || hasActiveFilters
+
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <div className="max-w-xl lg:max-w-2xl mx-auto px-4 py-8">
@@ -89,7 +130,7 @@ export default function BuscarPage() {
           buscar
         </h1>
 
-        <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-6"
+        <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-3"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
           <Search size={16} style={{ color: 'var(--text-subtle)' }} />
           <input
@@ -101,16 +142,91 @@ export default function BuscarPage() {
             className="bg-transparent text-sm outline-none w-full"
             style={{ color: 'var(--text)' }}
           />
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="transition-opacity hover:opacity-60 shrink-0"
+            style={{ color: hasActiveFilters ? '#60a5fa' : 'var(--text-subtle)' }}
+          >
+            <SlidersHorizontal size={15} />
+          </button>
           {query && (
-            <button onClick={clearSearch} className="text-xs transition-opacity hover:opacity-60"
+            <button onClick={clearSearch} className="text-xs transition-opacity hover:opacity-60 shrink-0"
               style={{ color: 'var(--text-subtle)' }}>
               limpiar
             </button>
           )}
         </div>
 
-        {/* Trending — solo cuando no hay búsqueda activa */}
-        {!query.trim() && (
+        {/* Panel de filtros avanzados */}
+        {showFilters && (
+          <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                filtros avanzados
+              </p>
+              {hasActiveFilters && (
+                <button onClick={clearFilters} className="text-xs flex items-center gap-1 transition-opacity hover:opacity-60"
+                  style={{ color: 'var(--text-subtle)' }}>
+                  <X size={11} /> limpiar filtros
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs block mb-1" style={{ color: 'var(--text-subtle)' }}>
+                  usuario específico
+                </label>
+                <input
+                  type="text"
+                  placeholder="username"
+                  value={filterUsername}
+                  onChange={e => setFilterUsername(e.target.value)}
+                  className="w-full text-sm outline-none rounded-lg px-3 py-2"
+                  style={{ background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs block mb-1" style={{ color: 'var(--text-subtle)' }}>
+                    desde
+                  </label>
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={e => setFilterDateFrom(e.target.value)}
+                    className="w-full text-sm outline-none rounded-lg px-3 py-2"
+                    style={{ background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs block mb-1" style={{ color: 'var(--text-subtle)' }}>
+                    hasta
+                  </label>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={e => setFilterDateTo(e.target.value)}
+                    className="w-full text-sm outline-none rounded-lg px-3 py-2"
+                    style={{ background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={applyFilters}
+                className="text-sm py-2 rounded-lg transition-opacity hover:opacity-80"
+                style={{ background: 'var(--text)', color: 'var(--bg)' }}
+              >
+                aplicar filtros
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Trending — solo si no hay búsqueda ni filtros activos */}
+        {!showResultsView && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={15} style={{ color: '#60a5fa' }} />
@@ -162,6 +278,12 @@ export default function BuscarPage() {
           </p>
         )}
 
+        {hasActiveFilters && (
+          <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+            {posts.length} resultado{posts.length !== 1 ? 's' : ''} con filtros aplicados
+          </p>
+        )}
+
         <div className="flex flex-col gap-3">
           {loading && (
             <p className="text-sm text-center mt-8 animate-pulse" style={{ color: 'var(--text-subtle)' }}>
@@ -169,7 +291,7 @@ export default function BuscarPage() {
             </p>
           )}
 
-          {!loading && query && profiles.length === 0 && posts.length === 0 && (
+          {!loading && showResultsView && profiles.length === 0 && posts.length === 0 && (
             <p className="text-sm text-center mt-8" style={{ color: 'var(--text-subtle)' }}>
               no se encontraron resultados
             </p>
@@ -219,6 +341,9 @@ export default function BuscarPage() {
                   text={post.content}
                   style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}
                 />
+              )}
+              {post.media_url && post.media_type === 'image' && (
+                <img src={post.media_url} alt="imagen" loading="lazy" className="w-full rounded-lg mt-2 object-cover max-h-40" />
               )}
               <p className="text-xs mt-2" style={{ color: 'var(--text-subtle)' }}>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {

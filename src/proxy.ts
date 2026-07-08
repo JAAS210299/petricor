@@ -2,8 +2,9 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-pathname', request.nextUrl.pathname)
+  requestHeaders.set('x-pathname', pathname)
 
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
 
@@ -26,14 +27,14 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user && request.nextUrl.pathname.startsWith('/feed')) {
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/registro')
+  const isProtectedRoute = !isAuthRoute
+
+  if (!user && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && (
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/registro')
-  )) {
+  if (user && isAuthRoute) {
     return NextResponse.redirect(new URL('/feed', request.url))
   }
 
@@ -41,5 +42,17 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/feed/:path*', '/login', '/registro', '/perfil/:path*', '/buscar/:path*', '/nuevo', '/mensajes/:path*'],
+  matcher: [
+    '/feed/:path*',
+    '/explorar/:path*',
+    '/login',
+    '/registro',
+    '/perfil/:path*',
+    '/buscar/:path*',
+    '/nuevo',
+    '/mensajes/:path*',
+    '/notificaciones/:path*',
+    '/post/:path*',
+    '/admin/:path*',
+  ],
 }

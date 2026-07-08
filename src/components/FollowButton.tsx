@@ -1,7 +1,7 @@
 // src/components/FollowButton.tsx
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -12,36 +12,37 @@ interface FollowButtonProps {
 
 export default function FollowButton({ targetUserId, currentUserId }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [loading, setLoading] = useState(!!currentUserId && currentUserId !== targetUserId)
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+
+  useEffect(() => {
+    if (!currentUserId || currentUserId === targetUserId) return
+
+    let cancelled = false
+
+    async function loadFollowStatus() {
+      const { data, error } = await supabase
+        .from('follows')
+        .select('id')
+        .eq('follower_id', currentUserId)
+        .eq('following_id', targetUserId)
+        .maybeSingle()
+
+      if (cancelled) return
+      if (!error) setIsFollowing(!!data)
+      setLoading(false)
+    }
+
+    loadFollowStatus()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUserId, targetUserId, supabase])
 
   // No mostrar el botón si miras tu propio perfil
   if (currentUserId === targetUserId) return null
-
-  // Comprobar el estado inicial del seguimiento
-  const checkFollowStatus = useCallback(async () => {
-    if (!currentUserId) {
-      setLoading(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('follows')
-      .select('id')
-      .eq('follower_id', currentUserId)
-      .eq('following_id', targetUserId)
-      .maybeSingle()
-
-    if (!error && data) {
-      setIsFollowing(true)
-    }
-    setLoading(false)
-  }, [currentUserId, targetUserId, supabase])
-
-  useEffect(() => {
-    checkFollowStatus()
-  }, [checkFollowStatus])
 
   const handleFollow = async () => {
     if (!currentUserId) {

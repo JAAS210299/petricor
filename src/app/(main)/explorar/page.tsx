@@ -1,17 +1,33 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import AudioPlayer from '@/components/AudioPlayer'
-import ExplorarClient from './ExplorarClient'
+import ExplorarClient, { type Post, type Profile } from './ExplorarClient'
 
 export const dynamic = 'force-dynamic'
+
+function countRows(rows: unknown) {
+  return Array.isArray(rows) ? rows.length : 0
+}
+
+type PostRow = Omit<Post, 'profiles'> & {
+  profiles: Profile | Profile[] | null
+}
+
+function normalizeProfile(profile: Profile | Profile[] | null | undefined) {
+  return Array.isArray(profile) ? profile[0] ?? null : profile ?? null
+}
+
+function normalizePost(post: PostRow): Post {
+  return {
+    ...post,
+    profiles: normalizeProfile(post.profiles),
+  }
+}
 
 export default async function ExplorarPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Posts populares: más likes en los últimos 7 días
   const { data: populares } = await supabase
     .from('posts')
     .select(`
@@ -23,10 +39,9 @@ export default async function ExplorarPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // Ordenar por número de likes descendente
-  const sorted = (populares ?? []).sort((a, b) => {
-    const aLikes = (a.likes as any[])?.length ?? 0
-    const bLikes = (b.likes as any[])?.length ?? 0
+  const sorted = (populares ?? []).map(post => normalizePost(post as PostRow)).sort((a, b) => {
+    const aLikes = countRows(a.likes)
+    const bLikes = countRows(b.likes)
     return bLikes - aLikes
   }).slice(0, 30)
 
@@ -36,7 +51,7 @@ export default async function ExplorarPage() {
         <h1 className="text-sm font-light tracking-widest mb-6" style={{ color: 'var(--text-muted)' }}>
           explorar
         </h1>
-        <ExplorarClient initialPosts={sorted} currentUserId={user.id} />
+        <ExplorarClient initialPosts={sorted} />
       </div>
     </main>
   )

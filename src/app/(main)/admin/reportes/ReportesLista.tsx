@@ -1,12 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ExternalLink, Check, X, Clock } from 'lucide-react'
 
 interface Props {
-  initialReports: any[]
+  initialReports: Report[]
+}
+
+type ReportStatus = 'pending' | 'resolved' | 'dismissed'
+
+interface ReportProfile {
+  username: string | null
+}
+
+interface Report {
+  id: string
+  reason: string
+  details: string | null
+  status: ReportStatus | null
+  created_at: string
+  post_id: string | null
+  comment_id: string | null
+  reported_user_id: string | null
+  reporter: ReportProfile | null
+  reported_user: ReportProfile | null
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -19,9 +38,9 @@ export default function ReportesLista({ initialReports }: Props) {
   const [reports, setReports] = useState(initialReports)
   const [filter, setFilter] = useState<'all' | 'pending' | 'resolved' | 'dismissed'>('pending')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  async function updateStatus(reportId: string, status: string) {
+  async function updateStatus(reportId: string, status: ReportStatus) {
     setUpdatingId(reportId)
     const { error } = await supabase
       .from('reports')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -12,11 +12,7 @@ interface NotifBadgeProps {
 
 export default function NotifBadge({ userId, initialCount }: NotifBadgeProps) {
   const [count, setCount] = useState(initialCount)
-  const supabase = createClient()
-
-  useEffect(() => {
-    setCount(initialCount)
-  }, [initialCount])
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchCount = useCallback(async () => {
     const { count: freshCount, error } = await supabase

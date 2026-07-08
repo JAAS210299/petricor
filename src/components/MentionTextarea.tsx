@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Suggestion {
@@ -40,8 +40,15 @@ export default function MentionTextarea({
   const [showDropdown, setShowDropdown] = useState(false)
   const [mentionStart, setMentionStart] = useState<number | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const inputRef = useRef<any>(null)
-  const supabase = createClient()
+  const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [])
 
   async function searchUsers(prefix: string) {
     if (!prefix) {
@@ -68,10 +75,15 @@ export default function MentionTextarea({
       setMentionStart(cursorPos - match[0].length)
       setShowDropdown(true)
       setActiveIndex(0)
-      searchUsers(match[1])
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = setTimeout(() => {
+        searchUsers(match[1])
+      }, 250)
     } else {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
       setShowDropdown(false)
       setMentionStart(null)
+      setSuggestions([])
     }
   }
 
@@ -120,25 +132,36 @@ export default function MentionTextarea({
     onKeyDown?.(e)
   }
 
-  const sharedProps: any = {
-    ref: inputRef,
-    value,
-    onChange: handleChange,
-    onKeyDown: handleKeyDown,
-    placeholder,
-    className,
-    style,
-    disabled,
-    maxLength,
-    autoFocus,
-  }
-
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       {as === 'textarea' ? (
-        <textarea {...sharedProps} rows={rows} />
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={className}
+          style={style}
+          disabled={disabled}
+          maxLength={maxLength}
+          autoFocus={autoFocus}
+          rows={rows}
+        />
       ) : (
-        <input type="text" {...sharedProps} />
+        <input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={className}
+          style={style}
+          disabled={disabled}
+          maxLength={maxLength}
+          autoFocus={autoFocus}
+        />
       )}
 
       {showDropdown && suggestions.length > 0 && (

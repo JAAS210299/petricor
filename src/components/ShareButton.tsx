@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { Share2, Check, Link as LinkIcon } from 'lucide-react'
 
 interface Props {
@@ -26,7 +26,7 @@ export default function ShareButton({ postId, size = 15 }: Props) {
         text: 'Mira esta publicación en Petricor',
         url: getUrl(),
       })
-    } catch (err) {
+    } catch {
       // Cancelado por el usuario, no hacemos nada
     }
   }
@@ -38,7 +38,7 @@ export default function ShareButton({ postId, size = 15 }: Props) {
       await navigator.clipboard.writeText(getUrl())
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       alert('No se pudo copiar el enlace')
     }
   }

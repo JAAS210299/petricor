@@ -66,7 +66,6 @@ export default function ConexionesTabs({
         )}
         {list.map(person => {
           const isOwnRow = person.id === currentUserId
-          const isFollowingPerson = currentUserFollowingIds.includes(person.id)
           return (
             <div
               key={person.id}
@@ -95,11 +94,10 @@ export default function ConexionesTabs({
                 </div>
               </Link>
 
-              {currentUserId && !isOwnRow && (
+              {!isOwnRow && (
                 <FollowButton
-                  followerId={currentUserId}
-                  followingId={person.id}
-                  initialFollowing={isFollowingPerson}
+                  targetUserId={person.id}
+                  currentUserId={currentUserId}
                 />
               )}
             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Send, Pencil, Flag } from 'lucide-react'
+import { MessageCircle, Send, Pencil, Flag, Eye } from 'lucide-react'
 import LikeButton from '@/components/LikeButton'
 import LikeComentarioButton from '@/components/LikeComentarioButton'
 import ComentarioInline from './ComentarioInline'
@@ -15,6 +15,7 @@ import LazyImage from '@/components/LazyImage'
 import ReportarModal from '@/components/ReportarModal'
 import ShareButton from '@/components/ShareButton'
 import SaveButton from '@/components/SaveButton'
+import VerifiedBadge from '@/components/VerifiedBadge'
 
 interface FeedListProps {
   initialPosts: any[]
@@ -58,7 +59,7 @@ export default function FeedList({ initialPosts = [], followingIds, userId, save
     setLoadingComments(true)
     const { data } = await supabase
       .from('comments')
-      .select('id, content, created_at, media_url, media_type, parent_id, user_id, edited_at, profiles(username, avatar_url), comment_likes(id, user_id)')
+      .select('id, content, created_at, media_url, media_type, parent_id, user_id, edited_at, profiles(username, avatar_url, is_verified), comment_likes(id, user_id)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
     setCommentsMap(prev => ({ ...prev, [postId]: data ?? [] }))
@@ -260,8 +261,9 @@ export default function FeedList({ initialPosts = [], followingIds, userId, save
                 background: 'var(--bg-input)', borderRadius: '12px',
                 padding: '8px 12px', display: 'inline-block', maxWidth: '100%'
               }}>
-                <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: comment.content ? '2px' : '0' }}>
+                <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: comment.content ? '2px' : '0', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {cUsername}
+                  {comment.profiles?.is_verified && <VerifiedBadge size={11} />}
                 </p>
                 {comment.content && (
                   <span>
@@ -410,7 +412,10 @@ export default function FeedList({ initialPosts = [], followingIds, userId, save
                     {username?.[0]?.toUpperCase()}
                   </div>
                 )}
-                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{username}</span>
+                <span className="text-sm flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                  {username}
+                  {(post.profiles as any)?.is_verified && <VerifiedBadge size={13} />}
+                </span>
               </Link>
               <div className="flex items-center gap-2">
                 {isFollowed && (
@@ -521,7 +526,10 @@ export default function FeedList({ initialPosts = [], followingIds, userId, save
                 userId={userId}
                 initialSaved={savedPostIds.includes(post.id)}
               />
-              <p className="text-xs ml-auto" style={{ color: 'var(--text-subtle)' }}>
+              <p className="text-xs ml-auto flex items-center gap-3" style={{ color: 'var(--text-subtle)' }}>
+                <span className="flex items-center gap-1">
+                  <Eye size={12} /> {post.views_count ?? 0}
+                </span>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
                 })}

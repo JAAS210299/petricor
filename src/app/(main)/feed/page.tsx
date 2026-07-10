@@ -17,7 +17,6 @@ export default async function FeedPage() {
 
   const followingIds = following?.map(f => f.following_id) ?? []
 
-  // Obtener bloqueos en ambas direcciones para filtrar el feed
   const { data: blocksData } = await supabase
     .from('blocks')
     .select('blocker_id, blocked_id')
@@ -32,8 +31,8 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at, image_url, user_id, media_url, media_type, edited_at,
-      profiles (id, username, avatar_url),
+      id, content, created_at, image_url, user_id, media_url, media_type, edited_at, views_count,
+      profiles (id, username, avatar_url, is_verified),
       likes (id, user_id),
       comments (id)
     `)
@@ -42,7 +41,6 @@ export default async function FeedPage() {
 
   const filteredPosts = (posts ?? []).filter(p => !blockedUserIds.has(p.user_id))
 
-  // IDs de posts guardados por el usuario actual
   const { data: savedRows } = await supabase
     .from('saved_posts')
     .select('post_id')

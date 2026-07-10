@@ -9,6 +9,9 @@ import ComentariosLista from './ComentariosLista'
 import PostBody from './PostBody'
 import ShareButton from '@/components/ShareButton'
 import SaveButton from '@/components/SaveButton'
+import VerifiedBadge from '@/components/VerifiedBadge'
+import ViewTracker from '@/components/ViewTracker'
+import { Eye } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +26,7 @@ export default async function PostPage({
 
   const { data: post } = await supabase
     .from('posts')
-    .select(`*, profiles (username, avatar_url)`)
+    .select(`*, profiles (username, avatar_url, is_verified)`)
     .eq('id', id)
     .single()
 
@@ -44,7 +47,7 @@ export default async function PostPage({
     .from('comments')
     .select(`
       id, user_id, post_id, content, created_at, media_url, media_type, parent_id, edited_at,
-      profiles (username, avatar_url),
+      profiles (username, avatar_url, is_verified),
       comment_likes (id, user_id)
     `)
     .eq('post_id', id)
@@ -70,8 +73,9 @@ export default async function PostPage({
                   {(post.profiles as any)?.username?.[0]?.toUpperCase()}
                 </div>
               )}
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-sm flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                 {(post.profiles as any)?.username}
+                {(post.profiles as any)?.is_verified && <VerifiedBadge size={13} />}
               </span>
             </Link>
             {user && <AccionesPost postId={post.id} userId={user.id} ownerId={post.user_id} />}
@@ -100,17 +104,24 @@ export default async function PostPage({
             <img src={post.image_url} alt="imagen del post" loading="lazy" className="w-full rounded-lg mt-3 object-cover max-h-96" />
           )}
           <div className="flex items-center justify-between mt-4">
-            <p className="text-xs" style={{ color: 'var(--text-subtle)' }}>
-              {new Date(post.created_at).toLocaleDateString('es-ES', {
-                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-              })}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs" style={{ color: 'var(--text-subtle)' }}>
+                {new Date(post.created_at).toLocaleDateString('es-ES', {
+                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                })}
+              </p>
+              <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-subtle)' }}>
+                <Eye size={12} /> {post.views_count ?? 0}
+              </span>
+            </div>
             <div className="flex items-center gap-3">
               <SaveButton postId={post.id} userId={user?.id ?? null} initialSaved={isSaved} size={14} />
               <ShareButton postId={post.id} size={14} />
             </div>
           </div>
         </div>
+
+        {user && <ViewTracker postId={post.id} userId={user.id} />}
 
         {/* Comentarios con replies y edición */}
         <ComentariosLista

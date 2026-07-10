@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation'
 import CerrarSesion from './CerrarSesion'
 import ThemeToggle from '@/components/ThemeToggle'
 import Link from 'next/link'
-import { Flag, Bookmark, Ban, Settings } from 'lucide-react'
+import { Flag, Bookmark, Ban, Settings, Eye } from 'lucide-react'
 import AudioPlayer from '@/components/AudioPlayer'
+import VerifiedBadge from '@/components/VerifiedBadge'
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabaseClient()
@@ -42,7 +43,10 @@ export default async function PerfilPage() {
               </div>
             )}
             <div>
-              <h1 className="font-medium" style={{ color: 'var(--text)' }}>@{profile?.username}</h1>
+              <h1 className="font-medium flex items-center gap-1" style={{ color: 'var(--text)' }}>
+                @{profile?.username}
+                {profile?.is_verified && <VerifiedBadge size={15} />}
+              </h1>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
               {profile?.bio && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{profile.bio}</p>
@@ -146,7 +150,10 @@ export default async function PerfilPage() {
               {post.content && (
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{post.content}</p>
               )}
-              <p className="text-xs mt-3" style={{ color: 'var(--text-subtle)' }}>
+              <p className="text-xs mt-3 flex items-center gap-3" style={{ color: 'var(--text-subtle)' }}>
+                <span className="flex items-center gap-1">
+                  <Eye size={11} /> {post.views_count ?? 0}
+                </span>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
                 })}

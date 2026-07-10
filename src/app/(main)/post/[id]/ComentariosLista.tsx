@@ -11,6 +11,7 @@ import ReplyForm from './ReplyForm'
 import TextConHashtags from '@/components/TextConHashtags'
 import MentionTextarea from '@/components/MentionTextarea'
 import ReportarModal from '@/components/ReportarModal'
+import VerifiedBadge from '@/components/VerifiedBadge'
 
 interface Props {
   initialComments: any[]
@@ -30,7 +31,7 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
   async function refreshComments() {
     const { data } = await supabase
       .from('comments')
-      .select('id, user_id, post_id, content, created_at, media_url, media_type, parent_id, edited_at, profiles(username, avatar_url), comment_likes(id, user_id)')
+      .select('id, user_id, post_id, content, created_at, media_url, media_type, parent_id, edited_at, profiles(username, avatar_url, is_verified), comment_likes(id, user_id)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
     if (data) setComments(data)
@@ -100,7 +101,10 @@ export default function ComentariosLista({ initialComments, postId, userId }: Pr
           </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{cUsername}</span>
+              <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                {cUsername}
+                {comment.profiles?.is_verified && <VerifiedBadge size={11} />}
+              </span>
               <div className="flex items-center gap-2">
                 <LikeComentarioButton
                   commentId={comment.id}

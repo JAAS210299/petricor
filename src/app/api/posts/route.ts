@@ -22,12 +22,12 @@ export async function GET(request: Request) {
   const { data: posts, error } = await supabase
     .from('posts')
     .select(`
-      id, content, created_at, image_url, media_url, media_type, user_id, edited_at,
-      profiles (id, username, avatar_url),
+      id, content, created_at, image_url, media_url, media_type, user_id, edited_at, views_count,
+      profiles (id, username, avatar_url, is_verified),
       likes (id, user_id),
       comments (
         id, content, created_at, media_url, media_type,
-        profiles (username, avatar_url)
+        profiles (username, avatar_url, is_verified)
       )
     `)
     .order('created_at', { ascending: false })

@@ -5,6 +5,7 @@ import MensajeButton from './MensajeButton'
 import BloquearButton from './BloquearButton'
 import PostsConReportar from './PostsConReportar'
 import ReportarPerfilButton from './ReportarPerfilButton'
+import VerifiedBadge from '@/components/VerifiedBadge'
 import Link from 'next/link'
 
 export default async function PerfilUsuarioPage(props: {
@@ -52,13 +53,6 @@ export default async function PerfilUsuarioPage(props: {
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
 
-  const { data: followData } = await supabase
-    .from('follows')
-    .select('id')
-    .eq('follower_id', user?.id ?? '')
-    .eq('following_id', profile.id)
-    .maybeSingle()
-
   const { count: seguidoresCount } = await supabase
     .from('follows')
     .select('*', { count: 'exact', head: true })
@@ -70,7 +64,6 @@ export default async function PerfilUsuarioPage(props: {
     .eq('follower_id', profile.id)
 
   const isOwnProfile = user?.id === profile.id
-  const isFollowing = !!followData
 
   return (
     <main className="min-h-screen pb-24" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
@@ -95,7 +88,10 @@ export default async function PerfilUsuarioPage(props: {
               </div>
             )}
             <div>
-              <h1 className="font-medium" style={{ color: 'var(--text)' }}>@{profile.username}</h1>
+              <h1 className="font-medium flex items-center gap-1" style={{ color: 'var(--text)' }}>
+                @{profile.username}
+                {profile.is_verified && <VerifiedBadge size={15} />}
+              </h1>
               {profile.bio && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{profile.bio}</p>
               )}
@@ -107,9 +103,8 @@ export default async function PerfilUsuarioPage(props: {
               {!iBlockedThem && (
                 <>
                   <FollowButton
-                    followerId={user.id}
-                    followingId={profile.id}
-                    initialFollowing={isFollowing}
+                    targetUserId={profile.id}
+                    currentUserId={user.id}
                   />
                   <MensajeButton
                     currentUserId={user.id}

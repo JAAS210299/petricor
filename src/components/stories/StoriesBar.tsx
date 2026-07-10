@@ -43,7 +43,6 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
   }
   const otherGroups = groups.filter(g => g.userId !== currentUserId)
 
-  // Ordenar: grupos con historias sin ver primero
   const sortedOtherGroups = [...otherGroups].sort((a, b) => {
     const aUnseen = a.stories.some(s => !viewedSet.has(s.id))
     const bUnseen = b.stories.some(s => !viewedSet.has(s.id))
@@ -80,11 +79,14 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
       <div className="flex gap-4 overflow-x-auto pb-2 mb-6" style={{ scrollbarWidth: 'none' }}>
         {/* Tu historia / añadir */}
         <div className="flex flex-col items-center gap-1 shrink-0" style={{ width: '64px' }}>
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={handleOwnClick}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleOwnClick() }}
             style={{
               width: '58px', height: '58px', borderRadius: '50%',
-              padding: '2px',
+              padding: '2px', cursor: 'pointer',
               background: ownGroup.stories.length > 0 && hasUnseen(ownGroup)
                 ? 'linear-gradient(135deg, #60a5fa, #a78bfa)'
                 : 'var(--border)',
@@ -95,7 +97,7 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
               width: '100%', height: '100%', borderRadius: '50%',
               background: 'var(--bg)', padding: '2px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
+              overflow: 'hidden', pointerEvents: 'none',
             }}>
               {ownGroup.avatarUrl ? (
                 <img src={ownGroup.avatarUrl} alt="tu historia" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -109,17 +111,20 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
                 </div>
               )}
             </div>
-            <div style={{
-              position: 'absolute', bottom: 0, right: 0,
-              width: '18px', height: '18px', borderRadius: '50%',
-              background: '#60a5fa', border: '2px solid var(--bg)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); setShowUpload(true) }}
+              style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: '18px', height: '18px', borderRadius: '50%',
+                background: '#60a5fa', border: '2px solid var(--bg)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0,
+              }}
             >
               <Plus size={11} color="white" />
-            </div>
-          </button>
+            </button>
+          </div>
           <span className="text-xs" style={{ color: 'var(--text-subtle)' }}>tu historia</span>
         </div>
 
@@ -129,16 +134,19 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
           const displayIndex = displayGroups.findIndex(dg => dg.userId === g.userId)
           return (
             <div key={g.userId} className="flex flex-col items-center gap-1 shrink-0" style={{ width: '64px' }}>
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => openViewer(displayIndex)}
+                onKeyDown={(e) => { if (e.key === 'Enter') openViewer(displayIndex) }}
                 style={{
-                  width: '58px', height: '58px', borderRadius: '50%', padding: '2px',
+                  width: '58px', height: '58px', borderRadius: '50%', padding: '2px', cursor: 'pointer',
                   background: unseen ? 'linear-gradient(135deg, #60a5fa, #a78bfa)' : 'var(--border)',
                 }}
               >
                 <div style={{
                   width: '100%', height: '100%', borderRadius: '50%',
-                  background: 'var(--bg)', padding: '2px', overflow: 'hidden',
+                  background: 'var(--bg)', padding: '2px', overflow: 'hidden', pointerEvents: 'none',
                 }}>
                   {g.avatarUrl ? (
                     <img src={g.avatarUrl} alt={g.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -152,7 +160,7 @@ export default function StoriesBar({ groups, currentUserId, viewedStoryIds, curr
                     </div>
                   )}
                 </div>
-              </button>
+              </div>
               <span className="text-xs truncate" style={{ color: 'var(--text-subtle)', maxWidth: '64px' }}>
                 {g.username}
               </span>

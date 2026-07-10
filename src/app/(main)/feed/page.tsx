@@ -57,21 +57,30 @@ export default async function FeedPage() {
   })
 
   // Historias activas (no expiradas), excluyendo usuarios bloqueados
-  const { data: storiesData } = await supabase
+  const { data: storiesData, error: storiesError } = await supabase
     .from('stories')
-    .select('id, user_id, media_url, media_type, created_at, profiles(username, avatar_url)')
+    .select('id, user_id, media_url, media_type, created_at')
     .order('created_at', { ascending: true })
+
+  if (storiesError) console.error('Error cargando historias:', storiesError)
 
   const activeStories = (storiesData ?? []).filter(s => !blockedUserIds.has(s.user_id))
 
+  // Traer los perfiles de los autores de esas historias por separado (evita depender del embed automático)
+  const storyUserIds = Array.from(new Set(activeStories.map(s => s.user_id)))
+  const { data: storyProfiles } = storyUserIds.length > 0
+    ? await supabase.from('profiles').select('id, username, avatar_url').in('id', storyUserIds)
+    : { data: [] }
+  const storyProfilesMap = new Map((storyProfiles ?? []).map(p => [p.id, p]))
+
   const storyGroupsMap = new Map<string, { userId: string; username: string; avatarUrl: string | null; stories: any[] }>()
-  activeStories.forEach((s: any) => {
-    const uname = s.profiles?.username ?? ''
+  activeStories.forEach((s) => {
+    const authorProfile = storyProfilesMap.get(s.user_id)
     if (!storyGroupsMap.has(s.user_id)) {
       storyGroupsMap.set(s.user_id, {
         userId: s.user_id,
-        username: uname,
-        avatarUrl: s.profiles?.avatar_url ?? null,
+        username: authorProfile?.username ?? '',
+        avatarUrl: authorProfile?.avatar_url ?? null,
         stories: [],
       })
     }

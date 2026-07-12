@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X, ZoomIn } from 'lucide-react'
+import StickerLayer from './StickerLayer'
+import StickerToolbar from './StickerToolbar'
+import type { Sticker } from '@/lib/stickers'
 
 interface Props {
   userId: string
@@ -10,10 +13,8 @@ interface Props {
   onSuccess: () => void
 }
 
-// Dimensiones del marco de edición (proporción 9:16, igual que las historias)
 const FRAME_W = 288
 const FRAME_H = 512
-// Resolución final de salida al publicar
 const OUTPUT_W = 1080
 const OUTPUT_H = 1920
 
@@ -24,12 +25,16 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
-  // --- Estado del editor de encuadre (solo para imágenes) ---
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const draggingRef = useRef<{ startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
+
+  // Stickers
+  const [stickers, setStickers] = useState<Sticker[]>([])
+  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null)
 
   const isImage = file?.type.includes('image')
   const isVideo = file?.type.includes('video')
@@ -45,10 +50,7 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
     const { w, h } = getDisplayedSize(z)
     const minX = Math.min(0, FRAME_W - w)
     const minY = Math.min(0, FRAME_H - h)
-    return {
-      x: Math.max(minX, Math.min(0, x)),
-      y: Math.max(minY, Math.min(0, y)),
-    }
+    return { x: Math.max(minX, Math.min(0, x)), y: Math.max(minY, Math.min(0, y)) }
   }
 
   function handleImageLoad() {
@@ -64,17 +66,14 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
     setZoom(1)
   }
 
-  function handlePointerDown(e: React.PointerEvent) {
-    draggingRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startOffsetX: offset.x,
-      startOffsetY: offset.y,
-    }
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  function handleFramePointerDown(e: React.PointerEvent) {
+    // Solo mueve la imagen si el pointerdown viene del propio marco (no de un sticker)
+    if (e.target !== frameRef.current && !(e.target as HTMLElement).dataset.bg) return
+    setSelectedStickerId(null)
+    draggingRef.current = { startX: e.clientX, startY: e.clientY, startOffsetX: offset.x, startOffsetY: offset.y }
   }
 
-  function handlePointerMove(e: React.PointerEvent) {
+  function handleFramePointerMove(e: React.PointerEvent) {
     if (!draggingRef.current) return
     const dx = e.clientX - draggingRef.current.startX
     const dy = e.clientY - draggingRef.current.startY
@@ -82,7 +81,7 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
     setOffset(next)
   }
 
-  function handlePointerUp() {
+  function handleFramePointerUp() {
     draggingRef.current = null
   }
 
@@ -99,16 +98,31 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
     setNaturalSize(null)
     setZoom(1)
     setOffset({ x: 0, y: 0 })
+    setStickers([])
+    setSelectedStickerId(null)
   }
 
   function removeFile() {
     setFile(null)
     setPreview(null)
     setNaturalSize(null)
+    setStickers([])
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  // Renderiza el recorte final a un canvas y devuelve un Blob listo para subir
+  function handleStickerChange(id: string, patch: Partial<Sticker>) {
+    setStickers(prev => prev.map(s => (s.id === id ? ({ ...s, ...patch } as Sticker) : s)))
+  }
+
+  function handleStickerDelete(id: string) {
+    setStickers(prev => prev.filter(s => s.id !== id))
+  }
+
+  function handleAddSticker(sticker: Sticker) {
+    setStickers(prev => [...prev, sticker])
+    setSelectedStickerId(sticker.id)
+  }
+
   const renderCroppedImage = useCallback((): Promise<Blob | null> => {
     return new Promise((resolve) => {
       const img = imgRef.current
@@ -123,17 +137,52 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
       const scaleFactor = OUTPUT_W / FRAME_W
       const { w: dw, h: dh } = getDisplayedSize(zoom)
 
-      ctx.drawImage(
-        img,
-        offset.x * scaleFactor,
-        offset.y * scaleFactor,
-        dw * scaleFactor,
-        dh * scaleFactor
-      )
+      // Fondo (imagen recortada)
+      ctx.drawImage(img, offset.x * scaleFactor, offset.y * scaleFactor, dw * scaleFactor, dh * scaleFactor)
+
+      // Dibujar stickers "planos" sobre el canvas final (texto y emoji, que no requieren interactividad)
+      stickers.forEach(s => {
+        const cx = (s.x / 100) * OUTPUT_W
+        const cy = (s.y / 100) * OUTPUT_H
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate((s.rotation * Math.PI) / 180)
+        ctx.scale(s.scale, s.scale)
+
+        if (s.type === 'text') {
+          ctx.font = `700 ${s.fontSize * 2.2}px sans-serif`
+          ctx.fillStyle = s.color
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.shadowColor = 'rgba(0,0,0,0.5)'
+          ctx.shadowBlur = 6
+          ctx.fillText(s.text, 0, 0)
+        } else if (s.type === 'emoji') {
+          ctx.font = '100px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(s.emoji, 0, 0)
+        }
+        // mention, location, poll y countdown se guardan como datos interactivos
+        // y se renderizan en vivo en el visor, no se "queman" en la imagen
+        ctx.restore()
+      })
 
       canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92)
     })
-  }, [naturalSize, offset, zoom])
+  }, [naturalSize, offset, zoom, stickers])
+
+  async function notifyMentions() {
+    const mentionStickers = stickers.filter((s): s is Extract<Sticker, { type: 'mention' }> => s.type === 'mention')
+    for (const m of mentionStickers) {
+      if (m.userId === userId) continue
+      await supabase.from('notifications').insert({
+        user_id: m.userId,
+        notifier_id: userId,
+        type: 'story_mention',
+      })
+    }
+  }
 
   async function handlePublish() {
     if (!file) return
@@ -168,19 +217,26 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
 
       const { data } = supabase.storage.from('posts').getPublicUrl(path)
 
+      // Guardamos SOLO los stickers interactivos (mention, location, poll, countdown)
+      // Texto y emoji ya quedaron "quemados" en la imagen final
+      const interactiveStickers = stickers.filter(s => ['mention', 'location', 'poll', 'countdown'].includes(s.type))
+
       const { error: insertError } = await supabase.from('stories').insert({
         user_id: userId,
         media_url: data.publicUrl,
         media_type: mediaType,
+        stickers: interactiveStickers,
       })
 
-      setLoading(false)
-
       if (insertError) {
+        setLoading(false)
         alert('Error al publicar: ' + insertError.message)
         return
       }
 
+      await notifyMentions()
+
+      setLoading(false)
       onSuccess()
     } catch (err) {
       setLoading(false)
@@ -195,7 +251,7 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
         position: 'fixed', inset: 0, zIndex: 200,
         background: 'rgba(0,0,0,0.85)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '20px',
+        padding: '20px', overflowY: 'auto',
       }}
     >
       <div
@@ -223,22 +279,25 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
         )}
         <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleFile} className="hidden" />
 
-        {/* Editor de encuadre — solo para imágenes */}
+        {/* Editor de encuadre + stickers — solo para imágenes */}
         {preview && isImage && (
-          <div className="mb-4">
+          <div className="mb-2">
             <div
+              ref={frameRef}
+              data-bg="1"
               style={{
                 width: `${FRAME_W}px`, height: `${FRAME_H}px`,
                 margin: '0 auto', position: 'relative', overflow: 'hidden',
                 borderRadius: '12px', background: 'black', touchAction: 'none', cursor: 'grab',
               }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
+              onPointerDown={handleFramePointerDown}
+              onPointerMove={handleFramePointerMove}
+              onPointerUp={handleFramePointerUp}
+              onPointerLeave={handleFramePointerUp}
             >
               <img
                 ref={imgRef}
+                data-bg="1"
                 src={preview}
                 alt="preview"
                 onLoad={handleImageLoad}
@@ -254,9 +313,17 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
                   pointerEvents: 'none',
                 }}
               />
+
+              <StickerLayer
+                stickers={stickers}
+                selectedId={selectedStickerId}
+                onSelect={setSelectedStickerId}
+                onChange={handleStickerChange}
+                onDelete={handleStickerDelete}
+                frameRef={frameRef}
+              />
             </div>
 
-            {/* Control de zoom */}
             <div className="flex items-center gap-2 mt-3 px-1">
               <ZoomIn size={14} style={{ color: 'var(--text-subtle)' }} />
               <input
@@ -269,13 +336,12 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
                 style={{ width: '100%' }}
               />
             </div>
-            <p className="text-xs text-center mt-1" style={{ color: 'var(--text-subtle)' }}>
-              arrastra para mover · desliza para hacer zoom
-            </p>
+
+            {/* Toolbar de stickers */}
+            <StickerToolbar onAdd={handleAddSticker} />
           </div>
         )}
 
-        {/* Preview simple para video (sin editor de encuadre) */}
         {preview && isVideo && (
           <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', maxHeight: '400px' }}>
             <video src={preview} controls style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: 'black' }} />
@@ -283,7 +349,7 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
         )}
 
         {preview && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-2">
             <button
               onClick={removeFile}
               className="flex-1 text-sm py-2 rounded-lg transition-opacity hover:opacity-70"

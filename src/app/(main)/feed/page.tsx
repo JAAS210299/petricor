@@ -59,7 +59,7 @@ export default async function FeedPage() {
   // Historias activas (no expiradas), excluyendo usuarios bloqueados
   const { data: storiesData, error: storiesError } = await supabase
     .from('stories')
-    .select('id, user_id, media_url, media_type, created_at')
+    .select('id, user_id, media_url, media_type, created_at, stickers')
     .order('created_at', { ascending: true })
 
   if (storiesError) console.error('Error cargando historias:', storiesError)
@@ -85,7 +85,7 @@ export default async function FeedPage() {
       })
     }
     storyGroupsMap.get(s.user_id)!.stories.push({
-      id: s.id, media_url: s.media_url, media_type: s.media_type, created_at: s.created_at,
+      id: s.id, media_url: s.media_url, media_type: s.media_type, created_at: s.created_at, stickers: s.stickers ?? [],
     })
   })
   const storyGroups = Array.from(storyGroupsMap.values())

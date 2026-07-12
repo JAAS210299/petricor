@@ -24,21 +24,23 @@ export default async function NotificacionesPage() {
     .then(() => {})
 
   const iconMap: Record<string, ReactNode> = {
-    like:         <Heart size={14} style={{ color: '#fb7185' }} />,
-    comment_like: <Heart size={14} style={{ color: '#fb7185' }} />,
-    comment:      <MessageCircle size={14} style={{ color: '#60a5fa' }} />,
-    reply:        <CornerDownRight size={14} style={{ color: '#a78bfa' }} />,
-    mention:      <AtSign size={14} style={{ color: '#34d399' }} />,
-    follow:       <UserPlus size={14} style={{ color: '#4ade80' }} />,
+    like:          <Heart size={14} style={{ color: '#fb7185' }} />,
+    comment_like:  <Heart size={14} style={{ color: '#fb7185' }} />,
+    comment:       <MessageCircle size={14} style={{ color: '#60a5fa' }} />,
+    reply:         <CornerDownRight size={14} style={{ color: '#a78bfa' }} />,
+    mention:       <AtSign size={14} style={{ color: '#34d399' }} />,
+    story_mention: <AtSign size={14} style={{ color: '#a78bfa' }} />,
+    follow:        <UserPlus size={14} style={{ color: '#4ade80' }} />,
   }
 
   const textMap: Record<string, string> = {
-    like:         'le dio me gusta a tu publicación',
-    comment_like: 'le dio me gusta a tu comentario',
-    comment:      'comentó tu publicación',
-    reply:        'respondió a tu comentario',
-    mention:      'te mencionó en una publicación',
-    follow:       'empezó a seguirte',
+    like:          'le dio me gusta a tu publicación',
+    comment_like:  'le dio me gusta a tu comentario',
+    comment:       'comentó tu publicación',
+    reply:         'respondió a tu comentario',
+    mention:       'te mencionó en una publicación',
+    story_mention: 'te mencionó en una historia',
+    follow:        'empezó a seguirte',
   }
 
   return (

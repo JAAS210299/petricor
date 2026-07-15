@@ -216,13 +216,7 @@ export default function StoryViewer({ groups, startGroupIndex, currentUserId, on
 
   useEffect(() => {
     if (!story) return
-    supabase
-      .from('story_views')
-      .upsert(
-        { story_id: story.id, viewer_id: currentUserId },
-        { onConflict: 'story_id,viewer_id', ignoreDuplicates: true }
-      )
-      .then(() => {})
+    supabase.from('story_views').insert({ story_id: story.id, viewer_id: currentUserId }).then(() => {})
   }, [story?.id, currentUserId, supabase])
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { X, Trash2, MapPin, BarChart3, Timer } from 'lucide-react'
+import { X, Trash2, MapPin, BarChart3, Timer, Send } from 'lucide-react'
 import type { Sticker } from '@/lib/stickers'
 
 interface Story {
@@ -28,7 +28,7 @@ interface Props {
   onClose: () => void
 }
 
-const IMAGE_DURATION_MS = 5000
+const IMAGE_DURATION_MS = 8000
 
 function CountdownDisplay({ targetDate, label }: { targetDate: string; label: string }) {
   const [remaining, setRemaining] = useState('')
@@ -183,6 +183,9 @@ export default function StoryViewer({ groups, startGroupIndex, currentUserId, on
   const [storyIndex, setStoryIndex] = useState(0)
   const [progress, setProgress] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
+  const [replySent, setReplySent] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number>(0)
@@ -269,6 +272,53 @@ export default function StoryViewer({ groups, startGroupIndex, currentUserId, on
     goNext()
   }
 
+  async function handleSendReply() {
+    if (!replyText.trim() || !story || !group || sendingReply) return
+    setSendingReply(true)
+
+    const otherUserId = group.userId
+    const user1 = currentUserId < otherUserId ? currentUserId : otherUserId
+    const user2 = currentUserId < otherUserId ? otherUserId : currentUserId
+
+    let conversationId: string | null = null
+
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('user1_id', user1)
+      .eq('user2_id', user2)
+      .maybeSingle()
+
+    if (existing) {
+      conversationId = existing.id
+    } else {
+      const { data: created } = await supabase
+        .from('conversations')
+        .insert({ user1_id: user1, user2_id: user2 })
+        .select('id')
+        .single()
+      conversationId = created?.id ?? null
+    }
+
+    if (!conversationId) {
+      setSendingReply(false)
+      return
+    }
+
+    await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      content: replyText.trim(),
+      story_reply_media_url: story.media_url,
+      story_reply_media_type: story.media_type,
+    })
+
+    setReplyText('')
+    setSendingReply(false)
+    setReplySent(true)
+    setTimeout(() => setReplySent(false), 2000)
+  }
+
   if (!group || !story) return null
 
   return (
@@ -345,6 +395,36 @@ export default function StoryViewer({ groups, startGroupIndex, currentUserId, on
           <div onClick={(e) => handleTapZone(e, 'left')} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30%', cursor: 'pointer' }} />
           <div onClick={(e) => handleTapZone(e, 'right')} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '30%', cursor: 'pointer' }} />
         </div>
+
+        {/* Responder por mensaje directo — solo en historias ajenas */}
+        {!isOwn && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px 16px', zIndex: 2 }}
+          >
+            <input
+              type="text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onFocus={() => setPaused(true)}
+              onBlur={() => setPaused(false)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
+              placeholder={replySent ? 'enviado ✓' : `Responder a ${group.username}...`}
+              style={{
+                flex: 1, fontSize: '13px', color: 'white', outline: 'none',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '20px', padding: '10px 16px',
+              }}
+            />
+            <button
+              onClick={handleSendReply}
+              disabled={!replyText.trim() || sendingReply}
+              style={{ color: 'white', opacity: !replyText.trim() || sendingReply ? 0.4 : 1, flexShrink: 0 }}
+            >
+              <Send size={20} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

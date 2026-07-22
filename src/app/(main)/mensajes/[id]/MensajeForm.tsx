@@ -12,6 +12,8 @@ interface Message {
   read: boolean
   media_url?: string
   media_type?: string
+  story_reply_media_url?: string | null
+  story_reply_media_type?: string | null
   profiles?: { username: string }
 }
 
@@ -140,7 +142,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Marcar todos los mensajes no leídos del otro usuario como leídos al cargar
   useEffect(() => {
     async function marcarLeidos() {
       try {
@@ -171,7 +172,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     marcarLeidos()
   }, [conversationId, senderId, supabase])
 
-  // Intersection Observer para marcar como leído cuando es visible
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       async (entries) => {
@@ -204,7 +204,6 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
     return () => observerRef.current?.disconnect()
   }, [messages, senderId, supabase])
 
-  // Realtime — nuevos mensajes
   useEffect(() => {
     const channel = supabase
       .channel(`conversation:${conversationId}`)
@@ -384,6 +383,31 @@ export default function ChatBox({ conversationId, senderId, initialMessages }: P
                   border: isOwn ? 'none' : '1px solid var(--border)'
                 }}
               >
+                {/* Vista previa de historia respondida */}
+                {msg.story_reply_media_url && (
+                  <div
+                    className="flex items-center gap-2 mb-2 pb-2"
+                    style={{ borderBottom: `1px solid ${isOwn ? 'rgba(0,0,0,0.15)' : 'var(--border)'}` }}
+                  >
+                    {msg.story_reply_media_type === 'video' ? (
+                      <video
+                        src={msg.story_reply_media_url}
+                        muted
+                        style={{ width: '34px', height: '34px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <img
+                        src={msg.story_reply_media_url}
+                        alt="historia"
+                        style={{ width: '34px', height: '34px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    )}
+                    <span className="text-xs" style={{ opacity: 0.7 }}>
+                      {isOwn ? 'Respondiste a su historia' : 'Respondió a tu historia'}
+                    </span>
+                  </div>
+                )}
+
                 {isImage && msg.media_url && !isAudio && !isVideo && (
                   <img src={msg.media_url} alt="imagen" className="w-full rounded-xl mb-2 max-h-48 object-cover" />
                 )}

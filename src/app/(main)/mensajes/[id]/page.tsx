@@ -45,7 +45,7 @@ export default async function ConversacionPage({
 
   const { data: rawMessages } = await supabase
     .from('messages')
-    .select('id, content, sender_id, created_at, read, media_url, media_type, profiles!messages_sender_id_fkey (username)')
+    .select('id, content, sender_id, created_at, read, media_url, media_type, story_reply_media_url, story_reply_media_type, profiles!messages_sender_id_fkey (username)')
     .eq('conversation_id', id)
     .order('created_at', { ascending: true })
     .limit(50)
@@ -58,6 +58,8 @@ export default async function ConversacionPage({
     read: msg.read,
     media_url: msg.media_url,
     media_type: msg.media_type,
+    story_reply_media_url: msg.story_reply_media_url,
+    story_reply_media_type: msg.story_reply_media_type,
     profiles: msg.profiles,
   }))
 

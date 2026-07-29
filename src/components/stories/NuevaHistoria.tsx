@@ -7,8 +7,9 @@ import StickerLayer from './StickerLayer'
 import StickerToolbar from './StickerToolbar'
 import CameraCapture from './CameraCapture'
 import VideoTrimEditor from './VideoTrimEditor'
+import VideoSpeedEditor from './VideoSpeedEditor'
 import type { Sticker } from '@/lib/stickers'
-import { Camera, Scissors } from 'lucide-react'
+import { Camera, Scissors, Gauge } from 'lucide-react'
 
 interface Props {
   userId: string
@@ -40,6 +41,7 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null)
   const [showCamera, setShowCamera] = useState(false)
   const [showTrimEditor, setShowTrimEditor] = useState(false)
+  const [showSpeedEditor, setShowSpeedEditor] = useState(false)
 
   const isImage = file?.type.includes('image')
   const isVideo = file?.type.includes('video')
@@ -120,6 +122,11 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
   function handleTrimConfirm(trimmedFile: File) {
     setShowTrimEditor(false)
     applyFile(trimmedFile)
+  }
+
+  function handleSpeedConfirm(newFile: File) {
+    setShowSpeedEditor(false)
+    applyFile(newFile)
   }
 
   function removeFile() {
@@ -386,6 +393,13 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
             >
               <Scissors size={14} /> recortar video
             </button>
+            <button
+              onClick={() => setShowSpeedEditor(true)}
+              className="w-full flex items-center justify-center gap-2 text-sm py-2 rounded-lg mt-2 transition-opacity hover:opacity-70"
+              style={{ background: 'var(--bg-input)', color: 'var(--text)' }}
+            >
+              <Gauge size={14} /> cambiar velocidad
+            </button>
           </div>
         )}
 
@@ -423,6 +437,14 @@ export default function NuevaHistoria({ userId, onClose, onSuccess }: Props) {
           maxDuration={15}
           onConfirm={handleTrimConfirm}
           onCancel={() => setShowTrimEditor(false)}
+        />
+      )}
+
+      {showSpeedEditor && file && (
+        <VideoSpeedEditor
+          file={file}
+          onConfirm={handleSpeedConfirm}
+          onCancel={() => setShowSpeedEditor(false)}
         />
       )}
     </div>

@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function RegistroPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -28,6 +30,7 @@ export default function RegistroPage() {
   }
 
   async function handleRegistro() {
+    if (!acceptedTerms) { setError('debes aceptar los términos y la política de privacidad'); return }
     if (usernameStatus === 'taken') { setError('ese nombre de usuario ya está en uso'); return }
     if (usernameStatus !== 'available') { setError('elige un nombre de usuario válido'); return }
     setLoading(true)
@@ -68,7 +71,6 @@ export default function RegistroPage() {
         <p className="text-sm mb-10" style={{ color: 'var(--text-muted)' }}>crea tu cuenta</p>
 
         <div className="flex flex-col gap-4">
-          {/* Username con comprobación en tiempo real */}
           <div className="flex flex-col gap-1">
             <input
               type="text"
@@ -104,11 +106,31 @@ export default function RegistroPage() {
             style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)' }}
           />
 
+          <label className="flex items-start gap-2 pl-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={e => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5"
+              style={{ accentColor: 'var(--text)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              He leído y acepto los{' '}
+              <Link href="/terminos" target="_blank" className="underline hover:opacity-70" style={{ color: 'var(--text)' }}>
+                Términos de uso
+              </Link>{' '}
+              y la{' '}
+              <Link href="/privacidad" target="_blank" className="underline hover:opacity-70" style={{ color: 'var(--text)' }}>
+                Política de Privacidad
+              </Link>
+            </span>
+          </label>
+
           {error && <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>}
 
           <button
             onClick={handleRegistro}
-            disabled={loading || usernameStatus === 'taken' || usernameStatus === 'checking'}
+            disabled={loading || usernameStatus === 'taken' || usernameStatus === 'checking' || !acceptedTerms}
             className="rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 mt-2"
             style={{ background: 'var(--text)', color: 'var(--bg)' }}
           >
